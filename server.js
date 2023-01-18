@@ -5,10 +5,6 @@ const dbConfig = require("./config/db.config");
 
 const app = express();
 
-// var corsOptions = {
-//   origin: "http://localhost:8081"
-// };
-
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Request-Method');
@@ -16,9 +12,6 @@ app.use((req, res, next) => {
   res.header('Allow', 'GET, POST, OPTIONS, PUT, DELETE');
   next();
 });
-
-
-// app.use(cors(corsOptions));
 
 // parse requests of content-type - application/json
 app.use(bodyParser.json());
@@ -51,11 +44,7 @@ app.get("/", (req, res) => {
 // routes
 require("./routes/auth.routes")(app);
 require("./routes/user.routes")(app);
-// const document_routes = require('./routes/document.routes');
-// const departure_routes = require('./routes/departure.routes');
-// require("./routes/document.routes")(app);
-
-// app.use("/api", document_routes, departure_routes);
+require("./routes/input.routes")(app);
 
 // set port, listen for requests
 const PORT = process.env.PORT || 8082;
