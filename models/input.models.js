@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 mongoose.set('useFindAndModify', false);
-// const Schema = mongoose.Schema;
 
 var _hour = new Date().toLocaleTimeString();
 var _date = new Date().toLocaleDateString();
