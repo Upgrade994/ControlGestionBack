@@ -10,7 +10,10 @@ module.exports = function(app){
         next();
     });
 
-    app.get(
-        "/api/inputs", inputController.getInputs
-    );
+    app.get("/api/inputs", inputController.getInputs);
+    app.get("/api/input/:id", inputController.getInput);
+    app.post("/api/input/save", inputController.saveInput);
+    app.put("/api/input/update/:id", inputController.updateInput);
+    app.delete("/api/input/delete/:id", inputController.deleteInput);
+    app.get('/api/input/find/:search?', inputController.findInput);
 };

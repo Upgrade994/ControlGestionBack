@@ -33,15 +33,11 @@ const Inputs = mongoose.model(
             type: Date,
             default: _hour
         },
-        acuse_recibido: {
-            type: String,
-            uppercase: true
-        },
         instrumento_juridico: {
             type: String,
             uppercase: true
         },
-        dirigido_a: {
+        remitente: {
             type: String,
             uppercase: true
         },
