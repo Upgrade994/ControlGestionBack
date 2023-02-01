@@ -1,9 +1,6 @@
 const mongoose = require("mongoose");
 mongoose.set('useFindAndModify', false);
 
-var _hour = new Date().toLocaleTimeString();
-var _date = new Date().toLocaleDateString();
-
 const Inputs = mongoose.model(
     "Inputs",
     new mongoose.Schema({
@@ -18,20 +15,16 @@ const Inputs = mongoose.model(
             uppercase: true
         },
         fecha_oficio: {
-            type: Date,
-            default: _date
+            type: String
         },
         fecha_vencimiento: {
-            type: Date,
-            default: _date
+            type: String
         },
         fecha_recepcion: {
-            type: Date,
-            default: _date
+            type: String
         },
         hora_recepcion: {
-            type: Date,
-            default: _hour
+            type: String
         },
         instrumento_juridico: {
             type: String,
