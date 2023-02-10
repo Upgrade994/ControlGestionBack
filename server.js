@@ -50,10 +50,10 @@ require("./routes/user.routes")(app);
 require("./routes/input.routes")(app);
 
 // set port, listen for requests
-const PORT = process.env.PORT || 8082;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}.`);
-});
+// const PORT = process.env.PORT || 8082;
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port ${PORT}.`);
+// });
 
 function initial() {
   Role.estimatedDocumentCount((err, count) => {
