@@ -68,6 +68,9 @@ const Inputs = mongoose.model(
         },
         edit_count: {
             type: Number
+        },
+        deleted: {
+            type: Boolean
         }
     },
     {

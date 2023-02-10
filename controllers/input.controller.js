@@ -1,10 +1,36 @@
 const Input = require("../models/input.models");
+var validator = require("validator");
 
-//Get all collection
-exports.getInputs = async (req, res) => {
+//Get all no deleted documents in collection
+exports.getNoDeletedInputs = async (req, res) => {
 
     await new Promise((resolve) => {
-        Input.find({}).exec((err, input) => {
+        Input.find({ "deleted": false }).exec((err, input) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al devolver el registro!'
+                });
+            }
+            if (!input) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existen registros!'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                input
+            });
+        });
+    });
+},
+
+//Get all deleted documents in collection
+exports.getDeletedInputs = async (req, res) => {
+
+    await new Promise((resolve) => {
+        Input.find({ "deleted": true }).exec((err, input) => {
             if (err) {
                 return res.status(500).send({
                     status: 'error',
@@ -37,7 +63,7 @@ exports.getInput = async (req, res) => {
     }
 
     Input.findById(inputId, (err, input) => {
-        console.log("find");
+        // console.log("find");
         if (err || !input) {
             return res.status(404).send({
                 status: 'error',
@@ -85,6 +111,7 @@ exports.saveInput = async (req, res) => {
         input.observacion = params.observacion;
         input.create_user = params.create_user;
         input.edit_count = params.edit_count;
+        input.deleted = params.deleted;
 
         await input.save((err, inputStored) => {
             if (err || !inputStored) {
@@ -142,7 +169,7 @@ exports.updateInput = async (req, res) => {
 
             return res.status(200).send({
                 status: 'success',
-                message: 'No existen registros'
+                message: 'Ok'
             });
         });
     } else {
