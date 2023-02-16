@@ -3,22 +3,24 @@ var validator = require("validator");
 
 //Get all institution documents
 exports.getAllInstitution = async (req, res) => {
-    Institution.find({}).exec((err, res) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al devolver los registros'
+    await new Promise((resolve) => {
+        Institution.find({}).exec((err, institution) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al devolver los registros'
+                });
+            }
+            if (!institution) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existen registros'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                institution
             });
-        }
-        if (!res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existen registros'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 },
@@ -34,17 +36,19 @@ exports.getInstitution = async (req, res) => {
         });
     }
 
-    Institution.findById(institutionId, (err, res) => {
-        if (err || !res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existe el registro.'
+    await new Promise((resolve) => {
+        Institution.findById(institutionId, (err, institution) => {
+            if (err || !institution) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existe el registro.'
+                });
+            }
+    
+            return res.status(200).send({
+                status: 'success',
+                institution
             });
-        }
-
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 },
@@ -64,24 +68,26 @@ exports.updateInstitution = async (req, res) => {
     }
 
     if (validate_name) {
-        await Institution.findOneAndUpdate({_id: institutionId}, params, { new: true }, (err, res) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al actualizar'
+        await new Promise((resolve) => {
+            Institution.findOneAndUpdate({_id: institutionId}, params, { new: true }, (err, institution) => {
+                if (err) {
+                    return res.status(500).send({
+                        status: 'error',
+                        message: 'Error al actualizar'
+                    });
+                }
+    
+                if (!institution) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'No existe el registro'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'success',
+                    institution
                 });
-            }
-
-            if (!res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existe el registro'
-                });
-            }
-
-            return res.status(200).send({
-                status: 'success',
-                res
             });
         });
     } else {
@@ -107,24 +113,26 @@ exports.updateManyInstitutions = async (req, res) => {
     }
 
     if (validate_name) {
-        await Institution.updateMany({_id: institutionId}, params, { new: true }, (err, res) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al actualizar'
+        await new Promise((resolve) => {
+            Institution.updateMany({_id: institutionId}, params, { new: true }, (err, institution) => {
+                if (err) {
+                    return res.status(500).send({
+                        status: 'error',
+                        message: 'Error al actualizar'
+                    });
+                }
+    
+                if (!institution) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'No existe el registro'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'success',
+                    institution
                 });
-            }
-
-            if (!res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existe el registro'
-                });
-            }
-
-            return res.status(200).send({
-                status: 'success',
-                res
             });
         });
     } else {
@@ -152,17 +160,19 @@ exports.saveInstitution = async (req, res) => {
 
         institution.name = params.name;
 
-        await institution.save((err, res) => {
-            if (err || !res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'El registro no se ha guardado'
+        await new Promise((resolve) => {
+            institution.save((err, institution) => {
+                if (err || !institution) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'El registro no se ha guardado'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'Success',
+                    institution: institution
                 });
-            }
-
-            return res.status(200).send({
-                status: 'Success',
-                institution: res
             });
         });
     } else {
@@ -190,17 +200,19 @@ exports.saveManyInstitutions = async (req, res) => {
 
         institution.name = params.name;
 
-        await institution.insertMany((err, res) => {
-            if (err || !res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'El registro no se ha guardado'
+        await new Promise((resolve) => {
+            institution.insertMany((err, institution) => {
+                if (err || !institution) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'El registro no se ha guardado'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'Success',
+                    institution: institution
                 });
-            }
-
-            return res.status(200).send({
-                status: 'Success',
-                institution: res
             });
         });
     } else {
@@ -215,22 +227,24 @@ exports.saveManyInstitutions = async (req, res) => {
 exports.deleteOneInstitution = async (req, res) => {
     const institutionId = req.params.id;
 
-    await Institution.findByIdAndDelete({_id: institutionId}, (err, res) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al borrar el registro'
+    await new Promise((resolve) => {
+        Institution.findByIdAndDelete({_id: institutionId}, (err, institution) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al borrar el registro'
+                });
+            }
+            if (!institution) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existe el registro'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                institution
             });
-        }
-        if (!res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existe el registro'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 },
@@ -239,22 +253,24 @@ exports.deleteOneInstitution = async (req, res) => {
 exports.deleteManyInstitutions = async (req, res) => {
     const institutionId = req.params.id;
 
-    await Institution.deleteMany({_id: institutionId}, (err, res) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al borrar el registro'
+    await new Promise((resolve) => {
+        Institution.deleteMany({_id: institutionId}, (err, institution) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al borrar el registro'
+                });
+            }
+            if (!institution) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existe el registro'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                institution
             });
-        }
-        if (!res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existe el registro'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 }

@@ -1,24 +1,26 @@
-const Area = require ("../models/area.models");
+const Areas = require ("../models/area.models");
 var validator = require("validator");
 
 //Get all Area documents
 exports.getAllArea = async (req, res) => {
-    Area.find({}).exec((err, res) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al devolver los registros'
+    await new Promise((resolve) => {
+        Areas.find({}).exec((err, area) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al devolver los registros'
+                });
+            }
+            if (!area) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existen registros'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                area
             });
-        }
-        if (!res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existen registros'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 },
@@ -34,17 +36,19 @@ exports.getArea = async (req, res) => {
         });
     }
 
-    Area.findById(areaId, (err, res) => {
-        if (err || !res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existe el registro.'
+    await new Promise((resolve) => {
+        Areas.findById(areaId, (err, area) => {
+            if (err || !area) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existe el registro.'
+                });
+            }
+    
+            return res.status(200).send({
+                status: 'success',
+                area
             });
-        }
-
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 },
@@ -64,24 +68,26 @@ exports.updateArea = async (req, res) => {
     }
 
     if (validate_name) {
-        await Area.findOneAndUpdate({_id: areaId}, params, { new: true }, (err, res) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al actualizar'
+        await new Promise((resolve) => {
+            Areas.findOneAndUpdate({_id: areaId}, params, { new: true }, (err, area) => {
+                if (err) {
+                    return res.status(500).send({
+                        status: 'error',
+                        message: 'Error al actualizar'
+                    });
+                }
+    
+                if (!area) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'No existe el registro'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'success',
+                    area
                 });
-            }
-
-            if (!res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existe el registro'
-                });
-            }
-
-            return res.status(200).send({
-                status: 'success',
-                res
             });
         });
     } else {
@@ -107,24 +113,26 @@ exports.updateManyAreas = async (req, res) => {
     }
 
     if (validate_name) {
-        await Area.updateMany({_id: areaId}, params, { new: true }, (err, res) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al actualizar'
+        await new Promise((resolve) => {
+            Areas.updateMany({_id: areaId}, params, { new: true }, (err, area) => {
+                if (err) {
+                    return res.status(500).send({
+                        status: 'error',
+                        message: 'Error al actualizar'
+                    });
+                }
+    
+                if (!area) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'No existe el registro'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'success',
+                    area
                 });
-            }
-
-            if (!res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existe el registro'
-                });
-            }
-
-            return res.status(200).send({
-                status: 'success',
-                res
             });
         });
     } else {
@@ -148,21 +156,23 @@ exports.saveArea = async (req, res) => {
     }
 
     if (validate_name) {
-        const area = new Area();
+        const area = new Areas();
 
         area.name = params.name;
 
-        await area.save((err, res) => {
-            if (err || !res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'El registro no se ha guardado'
+        await new Promise((resolve) => {
+            area.save((err, area) => {
+                if (err || !area) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'El registro no se ha guardado'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'Success',
+                    area: area
                 });
-            }
-
-            return res.status(200).send({
-                status: 'Success',
-                area: res
             });
         });
     } else {
@@ -186,21 +196,23 @@ exports.saveManyAreas = async (req, res) => {
     }
 
     if (validate_name) {
-        const area = new Area();
+        const area = new Areas();
 
         area.name = params.name;
 
-        await area.insertMany((err, res) => {
-            if (err || !res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'El registro no se ha guardado'
+        await new Promise((resolve) => {
+            area.insertMany((err, area) => {
+                if (err || !area) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'El registro no se ha guardado'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'Success',
+                    area: area
                 });
-            }
-
-            return res.status(200).send({
-                status: 'Success',
-                area: res
             });
         });
     } else {
@@ -215,22 +227,24 @@ exports.saveManyAreas = async (req, res) => {
 exports.deleteOneArea = async (req, res) => {
     const areaId = req.params.id;
 
-    await Area.findByIdAndDelete({_id: areaId}, (err, res) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al borrar el registro'
+    await new Promise((resolve) => {
+        Areas.findByIdAndDelete({_id: areaId}, (err, area) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al borrar el registro'
+                });
+            }
+            if (!area) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existe el registro'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                area
             });
-        }
-        if (!res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existe el registro'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 },
@@ -239,22 +253,24 @@ exports.deleteOneArea = async (req, res) => {
 exports.deleteManyAreas = async (req, res) => {
     const areaId = req.params.id;
 
-    await Area.deleteMany({_id: areaId}, (err, res) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al borrar el registro'
+    await new Promise((resolve) => {
+        Areas.deleteMany({_id: areaId}, (err, area) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al borrar el registro'
+                });
+            }
+            if (!area) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existe el registro'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                area
             });
-        }
-        if (!res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existe el registro'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 }

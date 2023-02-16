@@ -3,22 +3,24 @@ var validator = require("validator");
 
 //Get all instrument documents
 exports.getAllInstruments = async (req, res) => {
-    Instrument.find({}).exec((err, res) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al devolver los registros'
+    await new Promise((resolve) => {
+        Instrument.find({}).exec((err, instrument) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al devolver los registros'
+                });
+            }
+            if (!instrument) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existen registros'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                instrument
             });
-        }
-        if (!res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existen registros'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 },
@@ -34,17 +36,19 @@ exports.getInstrument = async (req, res) => {
         });
     }
 
-    Instrument.findById(instrumentId, (err, res) => {
-        if (err || !res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existe el registro.'
+    await new Promise((resolve) => {
+        Instrument.findById(instrumentId, (err, instrument) => {
+            if (err || !instrument) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existe el registro.'
+                });
+            }
+    
+            return res.status(200).send({
+                status: 'success',
+                instrument
             });
-        }
-
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 },
@@ -64,24 +68,26 @@ exports.updateInstrument = async (req, res) => {
     }
 
     if (validate_name) {
-        await Instrument.findOneAndUpdate({_id: instrumentId}, params, { new: true }, (err, res) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al actualizar'
+        await new Promise((resolve) => {
+            Instrument.findOneAndUpdate({_id: instrumentId}, params, { new: true }, (err, instrument) => {
+                if (err) {
+                    return res.status(500).send({
+                        status: 'error',
+                        message: 'Error al actualizar'
+                    });
+                }
+    
+                if (!instrument) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'No existe el registro'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'success',
+                    instrument
                 });
-            }
-
-            if (!res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existe el registro'
-                });
-            }
-
-            return res.status(200).send({
-                status: 'success',
-                res
             });
         });
     } else {
@@ -107,24 +113,26 @@ exports.updateManyInstruments = async (req, res) => {
     }
 
     if (validate_name) {
-        await Instrument.updateMany({_id: instrumentId}, params, { new: true }, (err, res) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al actualizar'
+        await new Promise((resolve) => {
+            Instrument.updateMany({_id: instrumentId}, params, { new: true }, (err, instrument) => {
+                if (err) {
+                    return res.status(500).send({
+                        status: 'error',
+                        message: 'Error al actualizar'
+                    });
+                }
+    
+                if (!instrument) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'No existe el registro'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'success',
+                    instrument
                 });
-            }
-
-            if (!res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existe el registro'
-                });
-            }
-
-            return res.status(200).send({
-                status: 'success',
-                res
             });
         });
     } else {
@@ -152,17 +160,19 @@ exports.saveInstrument = async (req, res) => {
 
         instrument.name = params.name;
 
-        await instrument.save((err, res) => {
-            if (err || !res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'El registro no se ha guardado'
+        await new Promise((resolve) => {
+            instrument.save((err, instrument) => {
+                if (err || !instrument) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'El registro no se ha guardado'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'Success',
+                    instrument: instrument
                 });
-            }
-
-            return res.status(200).send({
-                status: 'Success',
-                instrument: res
             });
         });
     } else {
@@ -190,17 +200,19 @@ exports.saveManyInstruments = async (req, res) => {
 
         instrument.name = params.name;
 
-        await instrument.insertMany((err, res) => {
-            if (err || !res) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'El registro no se ha guardado'
+        await new Promise((resolve) => {
+            instrument.insertMany((err, instrument) => {
+                if (err || !instrument) {
+                    return res.status(404).send({
+                        status: 'error',
+                        message: 'El registro no se ha guardado'
+                    });
+                }
+    
+                return res.status(200).send({
+                    status: 'Success',
+                    instrument: instrument
                 });
-            }
-
-            return res.status(200).send({
-                status: 'Success',
-                instrument: res
             });
         });
     } else {
@@ -215,22 +227,24 @@ exports.saveManyInstruments = async (req, res) => {
 exports.deleteOneInstrument = async (req, res) => {
     const instrumentId = req.params.id;
 
-    await Instrument.findByIdAndDelete({_id: instrumentId}, (err, res) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al borrar el registro'
+    await new Promise((resolve) => {
+        Instrument.findByIdAndDelete({_id: instrumentId}, (err, instrument) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al borrar el registro'
+                });
+            }
+            if (!instrument) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existe el registro'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                instrument
             });
-        }
-        if (!res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existe el registro'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 },
@@ -239,22 +253,24 @@ exports.deleteOneInstrument = async (req, res) => {
 exports.deleteManyInstruments = async (req, res) => {
     const instrumentId = req.params.id;
 
-    await Instrument.deleteMany({_id: instrumentId}, (err, res) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al borrar el registro'
+    await new Promise((resolve) => {
+        Instrument.deleteMany({_id: instrumentId}, (err, instrument) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al borrar el registro'
+                });
+            }
+            if (!instrument) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existe el registro'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                instrument
             });
-        }
-        if (!res) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existe el registro'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            res
         });
     });
 }
