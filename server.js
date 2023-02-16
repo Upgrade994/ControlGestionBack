@@ -5,10 +5,6 @@ const dbConfig = require("./config/db.config");
 
 const app = express();
 
-// var corsOptions = {
-//   origin: "http://localhost:8081"
-// };
-
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Request-Method');
@@ -16,9 +12,6 @@ app.use((req, res, next) => {
   res.header('Allow', 'GET, POST, OPTIONS, PUT, DELETE');
   next();
 });
-
-
-// app.use(cors(corsOptions));
 
 // parse requests of content-type - application/json
 app.use(bodyParser.json());
@@ -29,11 +22,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const db = require("./models");
 const Role = db.role;
 
+const connectionParams={
+  useNewUrlParser: true,
+  useCreateIndex: true,
+  useUnifiedTopology: true 
+}
+
 db.mongoose
-  .connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
+  .connect(`mongodb+srv://${dbConfig.USER}:${dbConfig.PASS}@${dbConfig.CLUS}/${dbConfig.DB}`, connectionParams)
   .then(() => {
     console.log("Successfully connect to MongoDB.");
     initial();
@@ -51,11 +47,11 @@ app.get("/", (req, res) => {
 // routes
 require("./routes/auth.routes")(app);
 require("./routes/user.routes")(app);
-// const document_routes = require('./routes/document.routes');
-// const departure_routes = require('./routes/departure.routes');
-// require("./routes/document.routes")(app);
-
-// app.use("/api", document_routes, departure_routes);
+require("./routes/input.routes")(app);
+require("./routes/rol.routes")(app);
+require("./routes/area.routes")(app);
+require("./routes/institution.routes")(app);
+require("./routes/instrument.routes")(app);
 
 // set port, listen for requests
 const PORT = process.env.PORT || 8082;

@@ -21,6 +21,12 @@ module.exports = function(app) {
   );
 
   app.get(
+    "/api/test/linker",
+    [authJwt.verifyToken, authJwt.isLinker],
+    controller.linkerBoard
+  );
+
+  app.get(
     "/api/test/admin",
     [authJwt.verifyToken, authJwt.isAdmin],
     controller.adminBoard

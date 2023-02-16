@@ -6,6 +6,7 @@ const User = mongoose.model(
     name: String,
     username: String,
     email: String,
+    area: String,
     password: String,
     roles: [
       {
@@ -13,6 +14,11 @@ const User = mongoose.model(
         ref: "Role"
       }
     ]
+  },{
+    timestamps: {
+      createdAt: 'createdAt',
+      updatedAt: 'updatedAt'
+  },
   })
 );
 
