@@ -58,7 +58,7 @@ exports.getInput = async (req, res) => {
     if(!inputId || inputId == null) {
         return res.status(404).send({
             status: 'error',
-            message: 'No existe el registroooo.'
+            message: 'No existe el registro.'
         });
     }
 
@@ -201,8 +201,8 @@ exports.deleteInput = async (req, res) => {
         return res.status(200).send({
             status: 'success',
             input: inputRemoved
-        })
-    })
+        });
+    });
 },
 
 exports.findInput = async (req, res) => {

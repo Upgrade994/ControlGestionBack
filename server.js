@@ -48,12 +48,16 @@ app.get("/", (req, res) => {
 require("./routes/auth.routes")(app);
 require("./routes/user.routes")(app);
 require("./routes/input.routes")(app);
+require("./routes/rol.routes")(app);
+require("./routes/area.routes")(app);
+require("./routes/institution.routes")(app);
+require("./routes/instrument.routes")(app);
 
 // set port, listen for requests
-// const PORT = process.env.PORT || 8082;
-// app.listen(PORT, () => {
-//   console.log(`Server is running on port ${PORT}.`);
-// });
+const PORT = process.env.PORT || 8082;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}.`);
+});
 
 function initial() {
   Role.estimatedDocumentCount((err, count) => {
