@@ -10,7 +10,8 @@ module.exports = function(app){
         next();
     });
 
-    app.get("/api/inputs", inputController.getInputs);
+    app.get("/api/inputs", inputController.getNoDeletedInputs);
+    app.get("/api/deleted/inputs", inputController.getDeletedInputs);
     app.get("/api/input/:id", inputController.getInput);
     app.post("/api/input/save", inputController.saveInput);
     app.put("/api/input/update/:id", inputController.updateInput);

@@ -22,11 +22,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 const db = require("./models");
 const Role = db.role;
 
+const connectionParams={
+  useNewUrlParser: true,
+  useCreateIndex: true,
+  useUnifiedTopology: true 
+}
+
 db.mongoose
-  .connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
+  .connect(`mongodb+srv://${dbConfig.USER}:${dbConfig.PASS}@${dbConfig.CLUS}/${dbConfig.DB}`, connectionParams)
   .then(() => {
     console.log("Successfully connect to MongoDB.");
     initial();
@@ -45,6 +48,10 @@ app.get("/", (req, res) => {
 require("./routes/auth.routes")(app);
 require("./routes/user.routes")(app);
 require("./routes/input.routes")(app);
+require("./routes/rol.routes")(app);
+require("./routes/area.routes")(app);
+require("./routes/institution.routes")(app);
+require("./routes/instrument.routes")(app);
 
 // set port, listen for requests
 const PORT = process.env.PORT || 8082;
