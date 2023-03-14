@@ -5,11 +5,13 @@ const Areas = mongoose.model(
     new mongoose.Schema({
         cabecera: {
             type: String,
-            uppercase: true
+            uppercase: true,
+            unique: true
         },
         direccion: {
             type: String,
-            uppercase: true
+            uppercase: true,
+            unique: true
         },
         deleted: {
             type: Boolean

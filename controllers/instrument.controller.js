@@ -1,10 +1,34 @@
 const Instrument = require ("../models/instrument.models");
 var validator = require("validator");
 
-//Get all instrument documents
-exports.getAllInstruments = async (req, res) => {
+//Get all no deleted instrument documents
+exports.getAllNoDeletedInstruments = async (req, res) => {
     await new Promise((resolve) => {
-        Instrument.find({}).exec((err, instrument) => {
+        Instrument.find({ "deleted": false}).exec((err, instrument) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al devolver los registros'
+                });
+            }
+            if (!instrument) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existen registros'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                instrument
+            });
+        });
+    });
+},
+
+//Get all deleted instrument documents
+exports.getAllDeletedInstruments = async (req, res) => {
+    await new Promise((resolve) => {
+        Instrument.find({ "deleted": true}).exec((err, instrument) => {
             if (err) {
                 return res.status(500).send({
                     status: 'error',
@@ -159,6 +183,7 @@ exports.saveInstrument = async (req, res) => {
         const instrument = new Instrument();
 
         instrument.name = params.name;
+        instrument.deleted = false;
 
         await new Promise((resolve) => {
             instrument.save((err, instrument) => {

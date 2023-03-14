@@ -1,10 +1,34 @@
 const Areas = require ("../models/area.models");
 var validator = require("validator");
 
-//Get all Area documents
-exports.getAllArea = async (req, res) => {
+//Get all no deleted Area documents
+exports.getAllNoDeletedAreas = async (req, res) => {
     await new Promise((resolve) => {
-        Areas.find({}).exec((err, area) => {
+        Areas.find({ "deleted": false }).exec((err, area) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al devolver los registros'
+                });
+            }
+            if (!area) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existen registros'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                area
+            });
+        });
+    });
+},
+
+//Get all deleted Area documents
+exports.getAllDeletedAreas = async (req, res) => {
+    await new Promise((resolve) => {
+        Areas.find({ "deleted": true }).exec((err, area) => {
             if (err) {
                 return res.status(500).send({
                     status: 'error',
@@ -57,9 +81,9 @@ exports.getArea = async (req, res) => {
 exports.updateArea = async (req, res) => {
     const areaId = req.params.id;
     const params = req.body;
-
+    // console.log(params);
     try {
-        var validate_name = !validator.isEmpty(params.name);
+        var validate_direccion = !validator.isEmpty(params.direccion);
     } catch (error) {
         return res.status(404).send({
             status: 'error',
@@ -67,7 +91,7 @@ exports.updateArea = async (req, res) => {
         });
     }
 
-    if (validate_name) {
+    if (validate_direccion) {
         await new Promise((resolve) => {
             Areas.findOneAndUpdate({_id: areaId}, params, { new: true }, (err, area) => {
                 if (err) {
@@ -148,17 +172,19 @@ exports.saveArea = async (req, res) => {
     const params = req.body;
 
     try {
-        var validate_name = !validator.isEmpty(params.name);
+        var validate_direccion = !validator.isEmpty(params.direccion);
     } catch (error) {
         return res.status(200).send({
             message: 'Faltan datos por enviar'
         });
     }
 
-    if (validate_name) {
+    if (validate_direccion) {
         const area = new Areas();
 
-        area.name = params.name;
+        area.cabecera = params.cabecera;
+        area.direccion = params.direccion;
+        area.deleted = false;
 
         await new Promise((resolve) => {
             area.save((err, area) => {
