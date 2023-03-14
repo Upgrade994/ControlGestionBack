@@ -10,12 +10,11 @@ module.exports = function(app){
         next();
     });
 
-    app.get("/api/areas", areaController.getAllArea);
+    app.get("/api/areas", areaController.getAllNoDeletedAreas);
+    app.get("/api/deleted/areas", areaController.getAllNoDeletedAreas);
     app.get("/api/area/:id", areaController.getArea);
     app.put("/api/area/update/:id", areaController.updateArea);
     app.put("/api/areas/updates/:id", areaController.updateManyAreas);
     app.post("/api/area/save", areaController.saveArea);
     app.post("/api/areas/saves/:id", areaController.saveManyAreas);
-    app.delete("/api/area/delete/:id", areaController.deleteOneArea);
-    app.delete("/api/areas/deletes/:id", areaController.deleteManyAreas);
 };

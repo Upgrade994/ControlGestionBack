@@ -10,12 +10,11 @@ module.exports = function(app){
         next();
     });
 
-    app.get("/api/instruments", instrumentController.getAllInstruments);
+    app.get("/api/instruments", instrumentController.getAllNoDeletedInstruments);
+    app.get("/api/deleted/instruments", instrumentController.getAllDeletedInstruments);
     app.get("/api/instrument/:id", instrumentController.getInstrument);
     app.put("/api/instrument/update/:id", instrumentController.updateInstrument);
     app.put("/api/instruments/updates/:id", instrumentController.updateManyInstruments);
     app.post("/api/instrument/save", instrumentController.saveInstrument);
     app.post("/api/instruments/saves/:id", instrumentController.saveManyInstruments);
-    app.delete("/api/instrument/delete/:id", instrumentController.deleteOneInstrument);
-    app.delete("/api/instruments/deletes/:id", instrumentController.deleteManyInstruments);
 };

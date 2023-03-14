@@ -1,10 +1,34 @@
 const Institution = require ("../models/institution.models");
 var validator = require("validator");
 
-//Get all institution documents
-exports.getAllInstitution = async (req, res) => {
+//Get all no deleted institution documents
+exports.getAllNoDeletedInstitution = async (req, res) => {
     await new Promise((resolve) => {
-        Institution.find({}).exec((err, institution) => {
+        Institution.find({ "deleted": false }).exec((err, institution) => {
+            if (err) {
+                return res.status(500).send({
+                    status: 'error',
+                    message: 'Error al devolver los registros'
+                });
+            }
+            if (!institution) {
+                return res.status(404).send({
+                    status: 'error',
+                    message: 'No existen registros'
+                });
+            }
+            return res.status(200).send({
+                status: 'success',
+                institution
+            });
+        });
+    });
+},
+
+//Get all deleted institution documents
+exports.getAllDeletedInstitution = async (req, res) => {
+    await new Promise((resolve) => {
+        Institution.find({ "deleted": true }).exec((err, institution) => {
             if (err) {
                 return res.status(500).send({
                     status: 'error',
@@ -159,6 +183,7 @@ exports.saveInstitution = async (req, res) => {
         const institution = new Institution();
 
         institution.name = params.name;
+        institution.deleted = false;
 
         await new Promise((resolve) => {
             institution.save((err, institution) => {
