@@ -5,7 +5,8 @@ const Instruments = mongoose.model(
     new mongoose.Schema({
         name: {
             type: String,
-            uppercase: true
+            uppercase: true,
+            unique: true
         },
         deleted: {
             type: Boolean
