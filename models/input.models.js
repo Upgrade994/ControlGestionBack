@@ -71,6 +71,41 @@ const Inputs = mongoose.model(
         },
         deleted: {
             type: Boolean
+        },
+        seguimiento: {
+            folio_salida: {
+                type: Number
+            },
+            fecha_oficio_salida: {
+                type: String
+            },
+            fecha_acuse_recibido: {
+                type: String
+            },
+            destinatario: {
+                type: String,
+                uppercase: true
+            },
+            cargo: {
+                type: String,
+                uppercase: true
+            },
+            atencion_otorgada: {
+                type: String,
+                uppercase: true
+            },
+            anexo: {
+                type: String
+            },
+            firma_visado: {
+                type: String
+            },
+            editor_user_exit: {
+                id: String,
+                username: String,
+                email: String,
+                accessToken: String,
+            }
         }
     },
     {

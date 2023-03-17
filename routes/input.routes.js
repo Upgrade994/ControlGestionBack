@@ -17,4 +17,5 @@ module.exports = function(app){
     app.put("/api/input/update/:id", inputController.updateInput);
     app.delete("/api/input/delete/:id", inputController.deleteInput);
     app.get('/api/input/find/:search?', inputController.findInput);
+    app.get('/api/inputs/areas/:search?', inputController.getAreasPerDay);
 };

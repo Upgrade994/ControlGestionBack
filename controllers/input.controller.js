@@ -233,4 +233,30 @@ exports.findInput = async (req, res) => {
             inputs
         });
     });
+},
+
+exports.getAreasPerDay = async (req, res) => {
+    const searchDay = req.params.search;
+
+    await Input.aggregate([ 
+        { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
+        { $group: { _id: '$asignado', cantidad: {$sum: 1}}} 
+    ]).exec((err, inputs) => {
+        if (err) {
+            return res.status(500).send({
+                status: 'error',
+                message: 'Error al buscar'
+            });
+        }
+        if (!inputs || inputs.length <= 0 || inputs == null) {
+            return res.status(404).send({
+                status: 'error',
+                message: 'No hay relaciones con tu busqueda'
+            });
+        }
+        return res.status(200).send({
+            status: 'success',
+            inputs
+        });
+    });
 }
