@@ -112,6 +112,7 @@ exports.saveInput = async (req, res) => {
         input.create_user = params.create_user;
         input.edit_count = params.edit_count;
         input.deleted = params.deleted;
+        input.pdfString = params.pdfString;
 
         await input.save((err, inputStored) => {
             if (err || !inputStored) {
@@ -207,7 +208,7 @@ exports.deleteInput = async (req, res) => {
 
 exports.findInput = async (req, res) => {
     const searchInput = req.params.search;
-    console.log(searchInput);
+    // console.log(searchInput);
     
     Input.find({
         "$or":[
@@ -240,7 +241,11 @@ exports.getAreasPerDay = async (req, res) => {
 
     await Input.aggregate([ 
         { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
-        { $group: { _id: '$asignado', cantidad: {$sum: 1}}} 
+        { $group: {
+            _id: '$asignado',
+            cantidad: {$sum: 1},
+            asunto: { $push: '$asunto' }
+        }} 
     ]).exec((err, inputs) => {
         if (err) {
             return res.status(500).send({

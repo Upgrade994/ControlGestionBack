@@ -54,6 +54,9 @@ const Inputs = mongoose.model(
             type: String,
             uppercase: true
         },
+        pdfString: {
+            type: String
+        },
         create_user: {
             id: String,
             username: String,
@@ -73,8 +76,13 @@ const Inputs = mongoose.model(
             type: Boolean
         },
         seguimiento: {
-            folio_salida: {
-                type: Number
+            oficio_salida: {
+                type: String,
+                uppercase: true
+            },
+            num_expediente: {
+                type: String,
+                uppercase: true
             },
             fecha_oficio_salida: {
                 type: String
@@ -96,6 +104,10 @@ const Inputs = mongoose.model(
             },
             anexo: {
                 type: String
+            },
+            estatus: {
+                type: String,
+                uppercase: true
             },
             firma_visado: {
                 type: String
