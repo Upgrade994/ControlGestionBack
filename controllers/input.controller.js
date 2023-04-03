@@ -1,53 +1,71 @@
 const Input = require("../models/input.models");
 var validator = require("validator");
+const NodeCache = require('node-cache');
+const cache = new NodeCache(); // Creamos una instancia de caché
+const cacheTimeout = 60; // Definimos el tiempo de expiración del caché en segundos
 
 //Get all no deleted documents in collection
 exports.getNoDeletedInputs = async (req, res) => {
+    const cacheKey = 'inputs';
 
-    await new Promise((resolve) => {
-        Input.find({ "deleted": false }).exec((err, input) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al devolver el registro!'
-                });
-            }
-            if (!input) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existen registros!'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                input
-            });
+    // Buscamos los registros en caché
+    let inputs = cache.get(cacheKey);
+
+    if (!inputs) {
+        // Si los registros no están en caché, los buscamos en la base de datos
+        try {
+          inputs = await Input.find({ deleted: false }, {pdfString: 0}).sort({ createdAt: -1 }).lean().exec();
+    
+          // Agregamos los registros a la caché
+          cache.set(cacheKey, inputs, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (inputs.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
         });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        input: inputs,
     });
 },
 
 //Get all deleted documents in collection
 exports.getDeletedInputs = async (req, res) => {
+    const cacheKey = 'inputs';
+    let inputs = cache.get(cacheKey);
 
-    await new Promise((resolve) => {
-        Input.find({ "deleted": true }).exec((err, input) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al devolver el registro!'
-                });
-            }
-            if (!input) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existen registros!'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                input
-            });
+    if (!inputs) {
+        try {
+          inputs = await Input.find({ deleted: true }, {pdfString: 0}).sort({ createdAt: -1 }).lean().exec();
+          cache.set(cacheKey, inputs, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (inputs.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
         });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        input: inputs,
     });
 },
 
@@ -264,4 +282,54 @@ exports.getAreasPerDay = async (req, res) => {
             inputs
         });
     });
+},
+
+exports.getEstatusPerArea = async (req, res) => {
+    // const fechaInicio = req.params.fechaInicio;
+    // const fechaFin = req.params.fechaFin;
+    // console.log(req.params);
+
+    try {
+        const inputs = await Input.aggregate([
+            { $match: {
+                // fecha_recepcion: { $gte: fechaInicio , $lt: fechaFin },
+                deleted: false
+              }},{ $group: {
+                _id: { asignado: "$asignado", estatus: "$estatus" },
+                total: { $sum: 1 }
+              }},
+              // Proyectar los resultados para que se vean más legibles
+              { $group: {
+                _id: "$_id.asignado",
+                data: {
+                    $push: {
+                        estatus: "$_id.estatus",
+                        total: "$total"
+                    }
+                }
+              }},
+              // Ordenar por área y estado
+              { $sort: {
+                "_id": 1,
+                "estatus.estatus": 1
+              }}
+          ]);
+
+          if (!inputs || inputs.length <= 0 || inputs == null) {
+            return res.status(404).send({
+              status: "error",
+              message: "No hay relaciones con tu busqueda",
+            });
+          }
+      
+          return res.status(200).send({
+            status: "success",
+            inputs,
+          });
+    } catch (error) {
+        return res.status(500).send({
+            status: "error",
+            message: "Error al buscar",
+          });
+    }
 }

@@ -1,51 +1,66 @@
 const Institution = require ("../models/institution.models");
 var validator = require("validator");
+const NodeCache = require('node-cache');
+const cache = new NodeCache();
+const cacheTimeout = 60;
 
 //Get all no deleted institution documents
 exports.getAllNoDeletedInstitution = async (req, res) => {
-    await new Promise((resolve) => {
-        Institution.find({ "deleted": false }).exec((err, institution) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al devolver los registros'
-                });
-            }
-            if (!institution) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existen registros'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                institution
-            });
+    const cacheKey = 'institutions';
+    let institutions = cache.get(cacheKey);
+
+    if (!institutions) {
+        try {
+          institutions = await Institution.find({ deleted: false }).sort({ name: 1 }).lean().exec();
+          cache.set(cacheKey, institutions, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (institutions.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
         });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        institution: institutions,
     });
 },
 
 //Get all deleted institution documents
 exports.getAllDeletedInstitution = async (req, res) => {
-    await new Promise((resolve) => {
-        Institution.find({ "deleted": true }).exec((err, institution) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al devolver los registros'
-                });
-            }
-            if (!institution) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existen registros'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                institution
-            });
+    const cacheKey = 'institutions';
+    let institutions = cache.get(cacheKey);
+
+    if (!institutions) {
+        try {
+          institutions = await Institution.find({ deleted: true }).sort({ name: 1 }).lean().exec();
+          cache.set(cacheKey, institutions, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (institutions.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
         });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        institution: institutions,
     });
 },
 

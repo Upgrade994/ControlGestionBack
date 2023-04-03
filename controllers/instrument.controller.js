@@ -1,51 +1,66 @@
 const Instrument = require ("../models/instrument.models");
 var validator = require("validator");
+const NodeCache = require('node-cache');
+const cache = new NodeCache();
+const cacheTimeout = 60;
 
 //Get all no deleted instrument documents
 exports.getAllNoDeletedInstruments = async (req, res) => {
-    await new Promise((resolve) => {
-        Instrument.find({ "deleted": false}).exec((err, instrument) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al devolver los registros'
-                });
-            }
-            if (!instrument) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existen registros'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                instrument
-            });
+    const cacheKey = 'instruments';
+    let instruments = cache.get(cacheKey);
+
+    if (!instruments) {
+        try {
+          instruments = await Instrument.find({ deleted: false }).sort({ name: 1 }).lean().exec();
+          cache.set(cacheKey, instruments, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (instruments.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
         });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        instrument: instruments,
     });
 },
 
 //Get all deleted instrument documents
 exports.getAllDeletedInstruments = async (req, res) => {
-    await new Promise((resolve) => {
-        Instrument.find({ "deleted": true}).exec((err, instrument) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al devolver los registros'
-                });
-            }
-            if (!instrument) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existen registros'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                instrument
-            });
+    const cacheKey = 'instruments';
+    let instruments = cache.get(cacheKey);
+
+    if (!instruments) {
+        try {
+          instruments = await Instrument.find({ deleted: true }).sort({ name: 1 }).lean().exec();
+          cache.set(cacheKey, instruments, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (instruments.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
         });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        instrument: instruments,
     });
 },
 
