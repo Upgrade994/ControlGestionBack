@@ -1,5 +1,7 @@
 const Input = require("../models/input.models");
 var validator = require("validator");
+const ExcelReport = require('../services/ExcelDailyReport.js')
+const ExcelResumeReport = require('../services/ExcelResumeReport.js')
 
 //Get all no deleted documents in collection
 exports.getNoDeletedInputs = async (req, res) => {
@@ -237,31 +239,99 @@ exports.findInput = async (req, res) => {
 },
 
 exports.getAreasPerDay = async (req, res) => {
-    const searchDay = req.params.search;
+    try {
 
-    await Input.aggregate([ 
-        { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
+        const searchDay = req.params.search;
+        
+        const aggregationResult = await Input.aggregate([
+          { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
+          { $group: {
+              _id: '$asignado',
+              cantidad: {$sum: 1},
+              asunto: { $push: '$asunto' }
+          }} 
+        ]);
+      
+        if (!aggregationResult || aggregationResult.length === 0) {
+          return res.status(404).send({
+            status: 'error',
+            message: 'No se encontraron resultados'
+          });
+        }
+      
+        return res.status(200).json(aggregationResult)
+
+      } catch (error) {
+
+        return res.status(500).send({
+          status: 'error',
+          message: 'Error al buscar'
+        });
+      }
+}
+
+exports.reporteResumen = async (req, res) => {
+    const searchInput = req.params.search;
+
+    const aggregationResult = await Input.aggregate([
+        { $match: {
+            $or : [
+              { "fecha_recepcion": searchInput},
+              { "remitente": searchInput},
+            ]}
+          },
         { $group: {
             _id: '$asignado',
             cantidad: {$sum: 1},
             asunto: { $push: '$asunto' }
-        }} 
-    ]).exec((err, inputs) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al buscar'
-            });
-        }
-        if (!inputs || inputs.length <= 0 || inputs == null) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No hay relaciones con tu busqueda'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            inputs
-        });
-    });
+        }}
+      ]);
+      
+    const workbook = ExcelResumeReport(aggregationResult);
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=" + "data.xlsx"
+      ); 
+      await workbook.xlsx.write(res)
+      return res.status(200).end();
+    //   return res.status(200).json(aggregationResult)
+}
+
+exports.reporteDiario = async (req, res) => {
+    const searchDay = req.query.fecha;
+     
+    // const aggregationResult = await Input.aggregate([
+    //     { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
+    //     { $group: {
+    //         _id: '$asignado',
+    //         cantidad: {$sum: 1},
+    //         asunto: { $push: '$asunto' }
+    //     }} 
+    //   ]);
+    
+    //Rango de fechas y una fecha especifica
+    
+    const aggregationResult = await Input.find({ "deleted": false });
+
+    const workbook = ExcelReport(aggregationResult);
+    
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=" + "data.xlsx"
+    );  
+
+    await workbook.xlsx.write(res)
+
+    return res.status(200).end();
 }

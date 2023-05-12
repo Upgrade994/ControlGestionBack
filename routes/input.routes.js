@@ -18,4 +18,6 @@ module.exports = function(app){
     app.delete("/api/input/delete/:id", inputController.deleteInput);
     app.get('/api/input/find/:search?', inputController.findInput);
     app.get('/api/inputs/areas/:search?', inputController.getAreasPerDay);
+    app.get('/api/reportes/',inputController.reporteDiario)
+    app.get('/api/reporteresumen/:search?',inputController.reporteResumen)
 };
