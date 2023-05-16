@@ -11,6 +11,7 @@ module.exports = function(app){
     });
 
     app.get("/api/inputs", inputController.getNoDeletedInputs);
+    app.get("/api/seguimiento", inputController.getNoDeletedInputsInTramit);
     app.get("/api/deleted/inputs", inputController.getDeletedInputs);
     app.get("/api/input/:id", inputController.getInput);
     app.post("/api/input/save", inputController.saveInput);

@@ -39,6 +39,40 @@ exports.getNoDeletedInputs = async (req, res) => {
     });
 },
 
+exports.getNoDeletedInputsInTramit = async (req, res) => {
+    const cacheKey = 'seguimiento';
+
+    // Buscamos los registros en caché
+    let inputs = cache.get(cacheKey);
+
+    if (!inputs) {
+        // Si los registros no están en caché, los buscamos en la base de datos
+        try {
+          inputs = await Input.find({ deleted: false, estatus: 'EN TRAMITE' }, {pdfString: 0}).sort({ createdAt: -1 }).lean().exec();
+    
+          // Agregamos los registros a la caché
+          cache.set(cacheKey, inputs, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (inputs.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
+        });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        input: inputs,
+    });
+},
+
 //Get all deleted documents in collection
 exports.getDeletedInputs = async (req, res) => {
     const cacheKey = 'inputs';
