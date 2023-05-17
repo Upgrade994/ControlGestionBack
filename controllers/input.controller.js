@@ -113,7 +113,7 @@ exports.getNoDeletedInputsInTramitByNormalUsers = async (req, res) => {
 },
 
 exports.getNoDeletedInputsInTramit = async (req, res) => {
-    const cacheKey = 'seguimiento';
+    const cacheKey = 'seguimientoInTramit';
 
     // Buscamos los registros en caché
     let inputs = cache.get(cacheKey);
