@@ -3,6 +3,44 @@ var validator = require("validator");
 const NodeCache = require('node-cache');
 const cache = new NodeCache(); // Creamos una instancia de caché
 const cacheTimeout = 60; // Definimos el tiempo de expiración del caché en segundos
+const ExcelReport = require('../services/ExcelDailyReport.js')
+const ExcelResumeReport = require('../services/ExcelResumeReport.js')
+
+//Get all no deleted documents in collection by normal users
+exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
+    const cacheKey = 'inputsNormalUsers';
+    const areaUsuario = req.params.area;
+
+    // Buscamos los registros en caché
+    let inputs = cache.get(cacheKey);
+
+    if (!inputs) {
+        // Si los registros no están en caché, los buscamos en la base de datos
+        try {
+          inputs = await Input.find({ deleted: false, asignado: areaUsuario }, {pdfString: 0}).sort({ createdAt: -1 }).lean().exec();
+    
+          // Agregamos los registros a la caché
+          cache.set(cacheKey, inputs, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (inputs.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
+        });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        input: inputs,
+    });
+},
 
 //Get all no deleted documents in collection
 exports.getNoDeletedInputs = async (req, res) => {
@@ -15,6 +53,41 @@ exports.getNoDeletedInputs = async (req, res) => {
         // Si los registros no están en caché, los buscamos en la base de datos
         try {
           inputs = await Input.find({ deleted: false }, {pdfString: 0}).sort({ createdAt: -1 }).lean().exec();
+    
+          // Agregamos los registros a la caché
+          cache.set(cacheKey, inputs, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (inputs.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
+        });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        input: inputs,
+    });
+},
+
+exports.getNoDeletedInputsInTramitByNormalUsers = async (req, res) => {
+    const cacheKey = 'seguimientoNormalUsers';
+    const areaUsuario = req.params.area;
+
+    // Buscamos los registros en caché
+    let inputs = cache.get(cacheKey);
+
+    if (!inputs) {
+        // Si los registros no están en caché, los buscamos en la base de datos
+        try {
+          inputs = await Input.find({ deleted: false, asignado: areaUsuario, estatus: 'EN TRAMITE' }, {pdfString: 0}).sort({ createdAt: -1 }).lean().exec();
     
           // Agregamos los registros a la caché
           cache.set(cacheKey, inputs, cacheTimeout);
@@ -366,4 +439,70 @@ exports.getEstatusPerArea = async (req, res) => {
             message: "Error al buscar",
           });
     }
+}
+
+exports.reporteResumen = async (req, res) => {
+    const searchInput = req.params.search;
+    console.log(searchInput);
+    const aggregationResult = await Input.aggregate([
+        { $match: {
+            $or : [
+              { "fecha_recepcion": searchInput},
+              { "remitente": searchInput},
+            ]}
+          },
+        { $group: {
+            _id: '$asignado',
+            cantidad: {$sum: 1},
+            asunto: { $push: '$asunto' }
+        }}
+      ]);
+
+    const workbook = ExcelResumeReport(aggregationResult);
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=" + "data.xlsx"
+      ); 
+      await workbook.xlsx.write(res)
+      return res.status(200).end();
+    //   return res.status(200).json(aggregationResult)
+}
+
+exports.reporteDiario = async (req, res) => {
+    const searchDay = req.query.fecha;
+
+    // const aggregationResult = await Input.aggregate([
+    //     { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
+    //     { $group: {
+    //         _id: '$asignado',
+    //         cantidad: {$sum: 1},
+    //         asunto: { $push: '$asunto' }
+    //     }} 
+    //   ]);
+
+    //Rango de fechas y una fecha especifica
+
+    const aggregationResult = await Input.find({ "deleted": false });
+
+    const workbook = ExcelReport(aggregationResult);
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=" + "data.xlsx"
+    );  
+
+    await workbook.xlsx.write(res)
+
+    return res.status(200).end();
 }
