@@ -11,7 +11,7 @@ module.exports = function(app){
     });
 
     app.get("/api/inputs", inputController.getNoDeletedInputs);
-    app.get("/api/inputs/:area", inputController.getNoDeletedInputsByNormalUsers);
+    app.get("/api/inputs/:area?", inputController.getNoDeletedInputsByNormalUsers);
     app.get("/api/seguimiento", inputController.getNoDeletedInputsInTramit);
     app.get("/api/seguimiento/:area", inputController.getNoDeletedInputsInTramitByNormalUsers);
     app.get("/api/deleted/inputs", inputController.getDeletedInputs);
@@ -21,7 +21,7 @@ module.exports = function(app){
     // app.delete("/api/input/delete/:id", inputController.deleteInput);
     app.get('/api/input/find/:search?', inputController.findInput);
     app.get('/api/inputs/areas/:search?', inputController.getAreasPerDay);
-    app.get('/api/inputs/area_estatus', inputController.getEstatusPerArea);
+    app.get("/api/inputs-by-estatus", inputController.getEstatusPerArea);
     app.get('/api/reportes/',inputController.reporteDiario);
     app.get('/api/reporteresumen/:search?',inputController.reporteResumen);
 };

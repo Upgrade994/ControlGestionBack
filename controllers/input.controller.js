@@ -3,8 +3,8 @@ var validator = require("validator");
 const NodeCache = require('node-cache');
 const cache = new NodeCache(); // Creamos una instancia de caché
 const cacheTimeout = 60; // Definimos el tiempo de expiración del caché en segundos
-const ExcelReport = require('../services/ExcelDailyReport.js')
-const ExcelResumeReport = require('../services/ExcelResumeReport.js')
+const ExcelReport = require('../services/ExcelDailyReport.js');
+const ExcelResumeReport = require('../services/ExcelResumeReport.js');
 
 //Get all no deleted documents in collection by normal users
 exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
@@ -38,7 +38,7 @@ exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
 
     return res.status(200).send({
         status: 'success',
-        input: inputs,
+        input: inputs
     });
 },
 
