@@ -304,7 +304,8 @@ exports.reporteResumen = async (req, res) => {
 }
 
 exports.reporteDiario = async (req, res) => {
-    const searchDay = req.query.fecha;
+    // const searchDay = req.query.fecha;
+    const searchDay = req.params.search;
      
     // const aggregationResult = await Input.aggregate([
     //     { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
@@ -317,7 +318,20 @@ exports.reporteDiario = async (req, res) => {
     
     //Rango de fechas y una fecha especifica
     
-    const aggregationResult = await Input.find({ "deleted": false });
+    // const aggregationResult = await Input.find({ "deleted": false });
+
+    const aggregationResult = await Input.find({ //query today up to tonight
+        fecha_recepcion: {
+            $gte: searchDay.split("T")[0]+"T00:00", 
+            $lt: searchDay.split("T")[0]+"T23:59"
+        }
+    });
+
+    // console.log(new Date(2020, 9, 17).toISOString())
+
+    // console.log("search es " + new Date(searchDay).toISOString())
+    // console.log("search2 es " + searchDay.split("T")[0]+"T00:00")
+    //console.log("agregation es " + aggregationResult)
 
     const workbook = ExcelReport(aggregationResult);
     
@@ -334,4 +348,5 @@ exports.reporteDiario = async (req, res) => {
     await workbook.xlsx.write(res)
 
     return res.status(200).end();
+    // return res.status(200).json(aggregationResult)
 }

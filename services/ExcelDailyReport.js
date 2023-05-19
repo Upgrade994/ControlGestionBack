@@ -1,4 +1,5 @@
 const Excel = require('exceljs');
+var fs = require('fs'); 
 
 const exportData = (data) => {
     //console.log(data)
@@ -7,6 +8,24 @@ const exportData = (data) => {
 
     let filaInicial = 5
 
+    var logoCampeche = wb.addImage({
+        buffer: fs.readFileSync('img/ESCUDO_GRIS.png'),
+        extension: 'png',
+      });
+
+      var logoCJ = wb.addImage({
+        buffer: fs.readFileSync('img/CJHORIZONTAL.png'),
+        extension: 'png',
+      });
+
+      ws.addImage(logoCampeche, {
+        tl: { col: 4, row: 0 }, ext: {width: 57, height: 70} //Vertical   inicio-fin
+      });
+
+      ws.addImage(logoCJ, {
+        tl: { col: 8, row: 0.5 }, ext: {width: 140, height: 45} //Vertical   inicio-fin
+      });
+      
     ws.getRow(filaInicial).values = [
         'NÚMERO DE CONTROL',
         'NÚMERO DE OFICIO',
@@ -17,9 +36,9 @@ const exportData = (data) => {
         'ORIGEN',
         'ASUNTO',
         'ASIGNADO',
-        'SEGUIMIENTO',
-        'VENCIMIENTO',
-        'OBSERVACIÓN'
+        'SEGUIMIENTO (Revisión)',
+        'TIEMPO ESTIMADO DE ENTREGA',
+        'OBSERVACIONES'
     ];
 
     ws.columns = [
@@ -40,7 +59,8 @@ const exportData = (data) => {
     ws.mergeCells('A1:L3');
     ws.getCell('A1').value =    'PODER EJECUTIVO DEL ESTADO DE CAMPECHE\n'+
                                 'CONSEJERÍA JURÍDICA\n' +
-                                'CONTROL DE RECEPCIÓN DE DOCUMENTOS DEL';
+                                'CONTROL DE RECEPCIÓN DE DOCUMENTOS DEL ' + new Date(data[0].fecha_recepcion.split("T")[0]).toLocaleDateString('en-US') + '\n' +
+                                'FORMATO PARA TURNAR DOCUMENTOS';
 
     ws.columns.forEach((columna, index) => {
         if (index == 5 && index == 6 && index == 7 && index == 8) {
@@ -71,7 +91,7 @@ const exportData = (data) => {
         })
     })
 
-    for (var i = filaInicial; i < ws.actualRowCount + filaInicial; i++) {
+    for (var i = filaInicial; i < ws.actualRowCount + 2; i++) {
         for (var j = 1; j < ws.actualColumnCount + 1; j++) {
 
             ws.getCell(i, j).border = {
@@ -82,6 +102,22 @@ const exportData = (data) => {
             };
         }
     }
+
+    //console.log(ws.lastRow.actualCellCount)
+    
+    var rows = [
+        [],
+        ['RECIBE:','','','','','HORA: '], // row by array
+        [],
+        ['NOMBRE:','','','','','ANEXOS: ', 'NO____ SI_____ DOCUMENTOS_____ RESPALDO MAGNÉTICO_____'],
+        [],
+        ['FECHA:','','','','','FIRMA: '],
+
+    ];
+
+    ws.addRows(rows);
+    ws.mergeCells('G20:H20');
+
     // let columns = data.reduce((acc, obj) => acc = Object.getOwnPropertyNames(obj), [])    
 
     // worksheet.columns = columns.map((el) => {
