@@ -300,38 +300,23 @@ exports.reporteResumen = async (req, res) => {
       ); 
       await workbook.xlsx.write(res)
       return res.status(200).end();
-    //   return res.status(200).json(aggregationResult)
 }
 
 exports.reporteDiario = async (req, res) => {
-    // const searchDay = req.query.fecha;
-    const searchDay = req.params.search;
-     
-    // const aggregationResult = await Input.aggregate([
-    //     { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
-    //     { $group: {
-    //         _id: '$asignado',
-    //         cantidad: {$sum: 1},
-    //         asunto: { $push: '$asunto' }
-    //     }} 
-    //   ]);
-    
-    //Rango de fechas y una fecha especifica
-    
-    // const aggregationResult = await Input.find({ "deleted": false });
+    let searchDay = req.params.search;
 
-    const aggregationResult = await Input.find({ //query today up to tonight
+    //En caso de que la fecha sea empty string, false, 0, null, undefined, etc...
+    if(!searchDay){
+        searchDay = new Date().toJSON().slice(0, 10) //Asignar la fecha actual
+    }
+
+    //Busqueda de filtro desde las 00:00 hasta las 23:59 del dia enviado
+    const aggregationResult = await Input.find({
         fecha_recepcion: {
             $gte: searchDay.split("T")[0]+"T00:00", 
             $lt: searchDay.split("T")[0]+"T23:59"
         }
     });
-
-    // console.log(new Date(2020, 9, 17).toISOString())
-
-    // console.log("search es " + new Date(searchDay).toISOString())
-    // console.log("search2 es " + searchDay.split("T")[0]+"T00:00")
-    //console.log("agregation es " + aggregationResult)
 
     const workbook = ExcelReport(aggregationResult);
     
@@ -348,5 +333,4 @@ exports.reporteDiario = async (req, res) => {
     await workbook.xlsx.write(res)
 
     return res.status(200).end();
-    // return res.status(200).json(aggregationResult)
 }
