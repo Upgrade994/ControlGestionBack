@@ -2,7 +2,7 @@ const Excel = require('exceljs');
 var fs = require('fs'); 
 
 const exportData = (data) => {
-    //console.log(data)
+    // console.log(data);
     let wb = new Excel.Workbook();
     let ws = wb.addWorksheet("Hoja1");
 
@@ -55,11 +55,15 @@ const exportData = (data) => {
         { key: 'fecha_vencimiento', width: 11 },
         { key: 'observacion', width: 12 },
     ]
+
+    //Optimizacion de codigo y la fecha tornaba un dia anterior, asi que sume uno
+    var fechaRecepcion = new Date(data[0].fecha_recepcion.split("T")[0]);
+    fechaRecepcion.setDate(fechaRecepcion.getDate() + 1);
     
     ws.mergeCells('A1:L3');
     ws.getCell('A1').value =    'PODER EJECUTIVO DEL ESTADO DE CAMPECHE\n'+
                                 'CONSEJERÍA JURÍDICA\n' +
-                                'CONTROL DE RECEPCIÓN DE DOCUMENTOS DEL ' + new Date(data[0].fecha_recepcion.split("T")[0]).toLocaleDateString('en-US') + '\n' +
+                                'CONTROL DE RECEPCIÓN DE DOCUMENTOS DEL ' + fechaRecepcion.toLocaleDateString('es-MX') + '\n' +
                                 'FORMATO PARA TURNAR DOCUMENTOS';
 
     ws.columns.forEach((columna, index) => {
@@ -104,7 +108,8 @@ const exportData = (data) => {
     }
 
     //console.log(ws.lastRow.actualCellCount)
-    
+    //Agregar guiones bajos para que el usuario tenga su lugar para firmar, y el no, si, etc
+    //aparece en un recuadro pequeño
     var rows = [
         [],
         ['RECIBE:','','','','','HORA: '], // row by array

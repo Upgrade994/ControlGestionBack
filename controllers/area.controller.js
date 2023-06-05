@@ -1,51 +1,66 @@
 const Areas = require ("../models/area.models");
 var validator = require("validator");
+const NodeCache = require('node-cache');
+const cache = new NodeCache();
+const cacheTimeout = 60;
 
 //Get all no deleted Area documents
 exports.getAllNoDeletedAreas = async (req, res) => {
-    await new Promise((resolve) => {
-        Areas.find({ "deleted": false }).exec((err, area) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al devolver los registros'
-                });
-            }
-            if (!area) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existen registros'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                area
-            });
+    const cacheKey = 'areas';
+    let areas = cache.get(cacheKey);
+
+    if (!areas) {
+        try {
+          areas = await Areas.find({ deleted: false }).sort({ direccion: 1 }).lean().exec();
+          cache.set(cacheKey, areas, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (areas.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
         });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        area: areas,
     });
 },
 
 //Get all deleted Area documents
 exports.getAllDeletedAreas = async (req, res) => {
-    await new Promise((resolve) => {
-        Areas.find({ "deleted": true }).exec((err, area) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al devolver los registros'
-                });
-            }
-            if (!area) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existen registros'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                area
-            });
+    const cacheKey = 'areas';
+    let areas = cache.get(cacheKey);
+
+    if (!areas) {
+        try {
+          areas = await Areas.find({ deleted: true }).sort({ direccion: 1 }).lean().exec();
+          cache.set(cacheKey, areas, cacheTimeout);
+        } catch (error) {
+          return res.status(500).send({
+            status: 'error',
+            message: 'Error al devolver el registro!',
+          });
+        }
+    }
+
+    if (areas.length === 0) {
+        return res.status(404).send({
+            status: 'error',
+            message: 'No existen registros!',
         });
+    }
+
+    return res.status(200).send({
+        status: 'success',
+        area: areas,
     });
 },
 
