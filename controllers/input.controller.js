@@ -443,20 +443,16 @@ exports.getEstatusPerArea = async (req, res) => {
 
 exports.reporteResumen = async (req, res) => {
     const searchInput = req.params.search;
-    console.log(searchInput);
+
+    //El match por alguna razon no funcionaba con fechas anteriores de 2023
     const aggregationResult = await Input.aggregate([
-        { $match: {
-            $or : [
-              { "fecha_recepcion": searchInput},
-              { "remitente": searchInput},
-            ]}
-          },
+        { $match: { fecha_recepcion: { $regex: searchInput, $options: "i" }}},
         { $group: {
             _id: '$asignado',
             cantidad: {$sum: 1},
             asunto: { $push: '$asunto' }
-        }}
-      ]);
+        }} 
+    ]);
 
     const workbook = ExcelResumeReport(aggregationResult);
 
@@ -475,28 +471,33 @@ exports.reporteResumen = async (req, res) => {
 }
 
 exports.reporteDiario = async (req, res) => {
-    const searchDay = req.query.fecha;
+    let searchDay = req.params.search;
+    // console.log(searchDay);
+    //En caso de que la fecha sea empty string, false, 0, null, undefined, etc...
+    if(!searchDay){
+        searchDay = new Date().toJSON().slice(0, 10) //Asignar la fecha actual
+    }
 
-    // const aggregationResult = await Input.aggregate([
-    //     { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
-    //     { $group: {
-    //         _id: '$asignado',
-    //         cantidad: {$sum: 1},
-    //         asunto: { $push: '$asunto' }
-    //     }} 
-    //   ]);
+    //Busqueda de filtro desde las 00:00 hasta las 23:59 del dia enviado
+    // const aggregationResult = await Input.find({
+    //     fecha_recepcion: {
+    //         $gte: searchDay.split("T")[0]+"T00:00", 
+    //         $lt: searchDay.split("T")[0]+"T23:59"
+    //     }
+    // });
 
-    //Rango de fechas y una fecha especifica
-
-    const aggregationResult = await Input.find({ "deleted": false });
+    // Optimizacion de la busqueda
+    const aggregationResult = await Input.find({
+        fecha_recepcion: { $regex: searchDay, $options: "i" }
+    });
 
     const workbook = ExcelReport(aggregationResult);
-
+    
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
-
+    
     res.setHeader(
       "Content-Disposition",
       "attachment; filename=" + "data.xlsx"

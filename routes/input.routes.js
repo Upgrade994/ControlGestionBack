@@ -22,6 +22,6 @@ module.exports = function(app){
     app.get('/api/input/find/:search?', inputController.findInput);
     app.get('/api/inputs/areas/:search?', inputController.getAreasPerDay);
     app.get("/api/inputs-by-estatus", inputController.getEstatusPerArea);
-    app.get('/api/reportes/',inputController.reporteDiario);
+    app.get('/api/reportes/:search?',inputController.reporteDiario);
     app.get('/api/reporteresumen/:search?',inputController.reporteResumen);
 };
