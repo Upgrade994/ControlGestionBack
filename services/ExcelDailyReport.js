@@ -121,7 +121,11 @@ const exportData = (data) => {
     ];
 
     ws.addRows(rows);
-    ws.mergeCells('G20:H20');
+    // Union por inicio de fila, inicio de columna, fila final y columna final
+    
+    // fila inicial, columna inicial, fila final, columna final, ajustandose a la cantidad de filas
+    ws.mergeCells(ws.actualRowCount+2,ws.actualColumnCount-5,ws.actualRowCount+2,ws.actualColumnCount-4);
+    //console.log(ws.actualRowCount+2,ws.actualColumnCount-5,ws.actualRowCount+2,ws.actualColumnCount-4)
 
     // let columns = data.reduce((acc, obj) => acc = Object.getOwnPropertyNames(obj), [])    
 
