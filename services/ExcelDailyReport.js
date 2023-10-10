@@ -57,7 +57,11 @@ const exportData = (data) => {
     ]
 
     //Optimizacion de codigo y la fecha tornaba un dia anterior, asi que sume uno
-    var fechaRecepcion = new Date(data[0].fecha_recepcion.split("T")[0]);
+    var fechaRecepcion = new Date(data[0].fecha_recepcion);
+    if (data[0].fecha_recepcion.includes("T")) {
+        // Dividir la cadena si contiene una "T" y tomar solo la parte de la fecha
+        fechaRecepcion = new Date(data[0].fecha_recepcion.split("T")[0]);
+    }
     fechaRecepcion.setDate(fechaRecepcion.getDate() + 1);
     
     ws.mergeCells('A1:L3');
@@ -84,7 +88,7 @@ const exportData = (data) => {
             num_oficio: item.num_oficio,
             fecha_oficio: item.fecha_oficio,
             fecha_recepcion: item.fecha_recepcion.split("T")[0],
-            hora_recepcion: item.fecha_recepcion.split("T")[1],
+            hora_recepcion: item.hora_recepcion,
             remitente: item.remitente,
             institucion_origen: item.institucion_origen,
             asunto: item.asunto,
@@ -121,7 +125,11 @@ const exportData = (data) => {
     ];
 
     ws.addRows(rows);
-    ws.mergeCells('G20:H20');
+    // Union por inicio de fila, inicio de columna, fila final y columna final
+
+    // fila inicial, columna inicial, fila final, columna final, ajustandose a la cantidad de filas
+    ws.mergeCells(ws.actualRowCount+2,ws.actualColumnCount-5,ws.actualRowCount+2,ws.actualColumnCount-4);
+    //console.log(ws.actualRowCount+2,ws.actualColumnCount-5,ws.actualRowCount+2,ws.actualColumnCount-4)
 
     // let columns = data.reduce((acc, obj) => acc = Object.getOwnPropertyNames(obj), [])    
 

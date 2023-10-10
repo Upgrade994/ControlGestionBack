@@ -23,19 +23,18 @@ app.use(bodyParser.text({ limit: '200mb' }));
 const db = require("./models");
 const Role = db.role;
 
-const connectionParams={
-  useNewUrlParser: true,
-  useCreateIndex: true,
-  useUnifiedTopology: true 
-}
-
 db.mongoose
-  .connect(`mongodb+srv://${dbConfig.USER}:${dbConfig.PASS}@${dbConfig.CLUS}/${dbConfig.DB}`, connectionParams)
+  .connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`, {
+    useNewUrlParser: true,
+    useCreateIndex: true,
+    useUnifiedTopology: true
+  })
   .then(() => {
     console.log("Successfully connect to MongoDB.");
     initial();
   })
   .catch(err => {
+    console.log(dbConfig);
     console.error("Connection error", err);
     process.exit();
   });
