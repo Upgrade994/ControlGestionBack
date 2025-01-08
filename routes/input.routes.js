@@ -10,8 +10,9 @@ module.exports = function(app){
         next();
     });
 
-    app.get("/api/inputs", inputController.getNoDeletedInputs);
-    app.get("/api/inputs/:area?", inputController.getNoDeletedInputsByNormalUsers);
+    app.get("/api/inputs/:search", inputController.getNoDeletedInputs);
+    app.get("/api/inputs_area/:area?", inputController.getNoDeletedInputsByNormalUsers);
+
     app.get("/api/seguimiento", inputController.getNoDeletedInputsInTramit);
     app.get("/api/seguimiento/:area", inputController.getNoDeletedInputsInTramitByNormalUsers);
     app.get("/api/deleted/inputs", inputController.getDeletedInputs);

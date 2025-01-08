@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
-mongoose.set('useFindAndModify', false);
+// mongoose.set('useFindAndModify', false);
 
-const Inputs = mongoose.model(
-    "Inputs",
+const inputSchema =
     new mongoose.Schema({
         anio: {
-            type: Number
+            type: Number,
+            index: true
         },
         folio: {
             type: Number
@@ -73,7 +73,8 @@ const Inputs = mongoose.model(
             type: Number
         },
         deleted: {
-            type: Boolean
+            type: Boolean,
+            index: true
         },
         seg_oficio_salida: {
             type: String,
@@ -167,7 +168,12 @@ const Inputs = mongoose.model(
             createdAt: 'createdAt',
             updatedAt: 'updatedAt'
         },
-    })
-);
+    });
 
-module.exports = Inputs;
+// Índice compuesto para ordenar por anio y luego createdAt
+inputSchema.index({ anio: -1, createdAt: -1 }); // 1 para ascendente en anio, -1 para descendente en createdAt
+
+// Índice compuesto con deleted para optimizar la consulta principal
+inputSchema.index({ deleted: 1, anio: -1, createdAt: -1 });
+
+module.exports = mongoose.model("Inputs", inputSchema);

@@ -3,64 +3,171 @@ var validator = require("validator");
 const ExcelReport = require('../services/ExcelDailyReport.js');
 const ExcelResumeReport = require('../services/ExcelResumeReport.js');
 
-//Get all no deleted documents in collection by normal users
+//Traer todos los registros con privilegios de enlace, informacion por area 08/01/2025 (FUNCIONANDO Y TERMINADO)
 exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
-    const areaUsuario = req.params.area;
-    // console.log("ok?");
-    try {
-        const inputs = await Input.find(
-            { deleted: false, asignado: areaUsuario },
-            { pdfString: 0 }
-        )
-            .sort({ createdAt: -1 })
-            .lean();
+    let areaUsuario;
 
-        if (inputs.length === 0) {
-            return res.status(404).send({
+    // Determinar cómo se proporciona el área (prioridad: query > params > body)
+    if (req.query.area) {
+        areaUsuario = req.query.area;
+    } else if (req.params.area) {
+        areaUsuario = req.params.area;
+    } else if (req.body.area) {
+        areaUsuario = req.body.area;
+    } else {
+        return res.status(400).json({
             status: 'error',
-            message: 'No existen registros!',
-            });
-        }
-
-        return res.status(200).send({
-            status: 'success',
-            input: inputs,
-        });
-    } catch (error) {
-        return res.status(500).send({
-            status: 'error',
-            message: 'Error al devolver el registro!',
+            message: 'El parámetro "area" es requerido (query, params o body).',
         });
     }
-},
 
-//Get all no deleted documents in collection
-exports.getNoDeletedInputs = async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || '';
+
     try {
-        const inputs = await Input.find(
-            { deleted: false },
-            { pdfString: 0 }
-        )
-            .sort({ createdAt: -1 })
-            .allowDiskUse(true)
+        const query = { deleted: false, asignado: areaUsuario };
+        let searchRegex = null;
+
+        if (search) {
+            const searchAsNumber = Number(search);
+
+            if (!isNaN(searchAsNumber)) {
+                query.folio = searchAsNumber;
+            } else {
+                try {
+                    searchRegex = new RegExp(search, 'i'); // 'i' para búsqueda insensible a mayúsculas/minúsculas
+                } catch (e) {
+                    return res.status(400).json({
+                        status: 'error',
+                        message: 'Expresión de búsqueda no válida.',
+                    });
+                }
+                query.$or = [
+                    { num_oficio: { $regex: searchRegex } },
+                    { asunto: { $regex: searchRegex } },
+                    { estatus: { $regex: searchRegex } },
+                    { fecha_recepcion: { $regex: searchRegex } },
+                    // Agrega aquí otros campos de texto en los que deseas buscar
+                ];
+            }
+        }
+
+        const totalInputs = await Input.countDocuments(query); // Contar documentos con el filtro
+
+        const projection = {
+            anio: 1,
+            folio: 1,
+            num_oficio: 1,
+            fecha_recepcion: 1,
+            asignado: 1,
+            asunto: 1,
+            estatus: 1,
+            _id: 1,
+        };
+
+        const inputs = await Input.find(query, projection)
+            .sort({ anio: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
             .lean();
 
         if (inputs.length === 0) {
-            return res.status(404).send({
+            return res.status(204).json();
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            inputs: inputs,
+            totalInputs: totalInputs,
+            totalPages: Math.ceil(totalInputs / limit),
+            currentPage: page,
+        });
+    } catch (error) {
+        console.error("Error en getNoDeletedInputsByNormalUsers:", error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Error al devolver el registro.',
+        });
+    }
+};
+
+//Traer todos los registros con todos los privilegios posibles 07/01/2025 (FUNCIONANDO Y TERMINADO)
+exports.getNoDeletedInputs = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+
+        const search = req.query.search || '';
+        const query = { deleted: false };
+        let searchRegex = null;
+
+        if (search) {
+            // Intenta convertir el término de búsqueda a un número
+            const searchAsNumber = Number(search);
+      
+            if (!isNaN(searchAsNumber)) {
+              // Si es un número válido, busca por igualdad en el campo folio
+              query.folio = searchAsNumber;
+            } else {
+              try {
+                searchRegex = new RegExp(search, 'i');
+              } catch (e) {
+                return res.status(400).json({
+                  status: 'error',
+                  message: 'Expresión de búsqueda no válida.',
+                });
+              }
+              // Si no es un número, usa una expresión regular para los campos de texto
+              query.$or = [
+                { num_oficio: { $regex: searchRegex } },
+                { asunto: { $regex: searchRegex } },
+                { estatus: { $regex: searchRegex } },
+                { fecha_recepcion: { $regex: searchRegex } },
+                // ... otros campos de texto
+              ];
+            }
+          }
+
+        const projection = {
+            anio: 1,
+            folio: 1,
+            num_oficio: 1,
+            fecha_recepcion: 1,
+            asignado: 1,
+            asunto: 1,
+            estatus: 1,
+            _id: 1,
+        };
+
+        const inputs = await Input.find(query, projection)
+            .sort({ anio: -1, createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean();
+
+        const totalInputs = await Input.countDocuments(query);
+
+        if (inputs.length === 0) {
+            return res.status(204).json({
             status: 'error',
             message: 'No existen registros!',
             });
         }
 
-        return res.status(200).send({
+        return res.status(200).json({
             status: 'success',
-            input: inputs,
+            inputs: inputs,
+            totalInputs: totalInputs,
+            totalPages: Math.ceil(totalInputs / limit),
+            currentPage: page,
         });
     } catch (error) {
-        console.log(error);
-        return res.status(500).send({
+        console.error(error);
+        return res.status(500).json({
             status: 'error',
-            message: 'Error al devolver el registro!!!!',
+            message: 'Error al devolver el registro.',
         });
     }
 },
@@ -307,6 +414,7 @@ exports.deleteInput = async (req, res) => {
     });
 },
 
+// ya no sirve
 exports.findInput = async (req, res) => {
     const searchInput = req.params.search;
     // console.log(searchInput);
