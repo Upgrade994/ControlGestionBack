@@ -1,7 +1,11 @@
-const Input = require("../models/input.models");
+const Input = require("../models/inputs.models");
 var validator = require("validator");
 const ExcelReport = require('../services/ExcelDailyReport.js');
 const ExcelResumeReport = require('../services/ExcelResumeReport.js');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { ObjectId } = require('mongodb');
 
 //Traer todos los registros con privilegios de enlace, informacion por area 08/01/2025 (FUNCIONANDO Y TERMINADO)
 exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
@@ -65,10 +69,12 @@ exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
             asunto: 1,
             estatus: 1,
             _id: 1,
+            // archivosPdf: 1,
         };
 
         const inputs = await Input.find(query, projection)
             .sort({ anio: -1, createdAt: -1 })
+            // .allowDiskUse(true)
             .skip(skip)
             .limit(limit)
             .lean();
@@ -143,6 +149,7 @@ exports.getNoDeletedInputs = async (req, res) => {
 
         const inputs = await Input.find(query, projection)
             .sort({ anio: -1, createdAt: -1 })
+            // .allowDiskUse(true)
             .skip((page - 1) * limit)
             .limit(limit)
             .lean();
@@ -172,6 +179,7 @@ exports.getNoDeletedInputs = async (req, res) => {
     }
 },
 
+// CONSIDERAR BORRAR
 exports.getNoDeletedInputsInTramitByNormalUsers = async (req, res) => {
     const areaUsuario = req.params.area;
 
@@ -202,6 +210,7 @@ exports.getNoDeletedInputsInTramitByNormalUsers = async (req, res) => {
     }
 },
 
+// CONSIDERAR BORRAR
 exports.getNoDeletedInputsInTramit = async (req, res) => {
     try {
         const inputs = await Input.find(
@@ -230,6 +239,7 @@ exports.getNoDeletedInputsInTramit = async (req, res) => {
     }
 },
 
+// CONSIDERAR BORRAR
 //Get all deleted documents in collection
 exports.getDeletedInputs = async (req, res) => {
     try {
@@ -259,6 +269,7 @@ exports.getDeletedInputs = async (req, res) => {
     }
 },
 
+// CONSIDERAR BORRAR
 //Get only one
 exports.getInput = async (req, res) => {
     const inputId = req.params.id;

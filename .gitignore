@@ -1,2 +1,6 @@
 # dependencies
 /node_modules
+
+#others
+migracion.log
+migrar respaldo.js

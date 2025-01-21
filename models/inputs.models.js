@@ -1,0 +1,54 @@
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
+const usuarioSchema = new Schema({
+    id: { type: Schema.Types.ObjectId, required: true }, // Usa ObjectId para IDs
+    username: { type: String, required: true },
+    email: { type: String, required: true },
+    // accessToken: { type: String }, // Considera si realmente necesitas guardar el accessToken aquí. Por seguridad, es mejor manejarlo en la capa de autenticación.
+});
+
+const seguimientoSchema = new Schema({
+    fecha_respuesta: { type: Date, default: Date.now },
+    usuario: { type: usuarioSchema, required: true }, // Referencia al usuario
+    comentarios: { type: String, uppercase: true }, // Observaciones
+    archivosPdf_seguimiento: [{ type: String }],
+    num_expediente: {type: String, uppercase: true},
+    fecha_oficio_salida: {type: Date},
+    fecha_acuse_recibido: {type: Date},
+    destinatario: {type: String, uppercase: true},
+    cargo: {type: String, uppercase: true},
+    atencion_otorgada: {type: String, uppercase: true},
+    anexo: {type: String},
+    estatus: {type: String, uppercase: true},
+    firma_visado: {type: String},
+}, { timestamps: true });
+
+const inputSchema = new Schema({
+    anio: { type: Number, required: true, index: true },
+    folio: { type: Number, required: true },
+    num_oficio: { type: String, uppercase: true }, // Añade unique para evitar duplicados ----- , required: true, unique: true
+    fecha_oficio: { type: Date, required: true }, // Usa tipo Date
+    fecha_vencimiento: { type: Date }, // Usa tipo Date
+    fecha_recepcion: { type: Date, required: true }, // Usa tipo Date
+    hora_recepcion: { type: String }, // Considera usar un tipo Time si MongoDB lo soporta en tu versión.
+    instrumento_juridico: { type: String, uppercase: true },
+    remitente: { type: String, uppercase: true },
+    institucion_origen: { type: String, uppercase: true },
+    asunto: { type: String, uppercase: true },
+    asignado: { type: String, uppercase: true },
+    estatus: { type: String, uppercase: true },
+    observacion: { type: String, uppercase: true },
+    archivosPdf: [{ type: String }],
+    create_user: { type: usuarioSchema, required: true }, // Referencia al usuario que crea
+    editor_user: { type: usuarioSchema }, // Referencia al usuario que edita
+    edit_count: { type: Number, default: 0 },
+    deleted: { type: Boolean, default: false, index: true },
+    seguimientos: { type: seguimientoSchema },
+}, { timestamps: true });
+
+// Índices compuestos (mejorados)
+inputSchema.index({ anio: -1, createdAt: -1 });
+inputSchema.index({ deleted: 1, anio: -1, createdAt: -1 });
+
+module.exports = mongoose.model('InputsNuevo', inputSchema);

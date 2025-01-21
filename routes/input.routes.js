@@ -10,7 +10,7 @@ module.exports = function(app){
         next();
     });
 
-    app.get("/api/inputs/:search", inputController.getNoDeletedInputs);
+    app.get("/api/inputs/:search?", inputController.getNoDeletedInputs);
     app.get("/api/inputs_area/:area?", inputController.getNoDeletedInputsByNormalUsers);
 
     app.get("/api/seguimiento", inputController.getNoDeletedInputsInTramit);

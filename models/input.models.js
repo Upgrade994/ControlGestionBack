@@ -54,6 +54,11 @@ const inputSchema =
             type: String,
             uppercase: true
         },
+        archivosPdf: [
+            { 
+                type: String
+            }
+        ],
         pdfString: {
             type: String
         },
@@ -112,55 +117,19 @@ const inputSchema =
         seg_firma_visado: {
             type: String
         },
+        seg_pdfString: {
+            type: String
+        },
+        seg_archivosPdf: [
+            { 
+                type: String
+            }
+        ],
         seg_editor_user_exit: {
             id: String,
             username: String,
             email: String,
             accessToken: String,
-        },
-        seguimiento: {
-            oficio_salida: {
-                type: String,
-                uppercase: true
-            },
-            num_expediente: {
-                type: String,
-                uppercase: true
-            },
-            fecha_oficio_salida: {
-                type: String
-            },
-            fecha_acuse_recibido: {
-                type: String
-            },
-            destinatario: {
-                type: String,
-                uppercase: true
-            },
-            cargo: {
-                type: String,
-                uppercase: true
-            },
-            atencion_otorgada: {
-                type: String,
-                uppercase: true
-            },
-            anexo: {
-                type: String
-            },
-            estatus: {
-                type: String,
-                uppercase: true
-            },
-            firma_visado: {
-                type: String
-            },
-            editor_user_exit: {
-                id: String,
-                username: String,
-                email: String,
-                accessToken: String,
-            }
         }
     },
     {
