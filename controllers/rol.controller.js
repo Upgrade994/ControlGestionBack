@@ -1,45 +1,73 @@
-const Role = require ("../models/role.models");
+const Role = require("../models/role.models");
 
-// Get all admin roles
 exports.getAdminRoles = async (req, res) => {
-    Role.find({}).exec((err, role) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al devolver el registro'
-            });
-        }
-        if (!role) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existen registros'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            role
-        });
-    });
-}
+  try {
+    const roles = await Role.find({ admin: true }).exec(); // Filter by admin: true
 
-// Get all normal roles
-exports.getRoles = async (req, res) => {
-    Role.find({ "admin": false }).exec((err, role) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al devolver el registro'
-            });
-        }
-        if (!role) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No existen registros'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            role
-        });
+    if (!roles || roles.length === 0) { // Check for empty array as well
+      return res.status(404).json({
+        status: 'error',
+        message: 'No admin roles found' // More specific message
+      });
+    }
+
+    res.status(200).json({ // Use .json for consistency
+      status: 'success',
+      roles // Send the roles directly, no need to wrap in 'role'
     });
+  } catch (error) {
+    console.error("Error fetching admin roles:", error); // Log the actual error
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching admin roles' // Generic message for the client
+    });
+  }
+};
+
+exports.getRoles = async (req, res) => {
+  try {
+    const roles = await Role.find({ admin: false }).exec();
+
+    if (!roles || roles.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'No roles found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      roles
+    });
+  } catch (error) {
+    console.error("Error fetching roles:", error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error fetching roles'
+    });
+  }
+};
+
+exports.createRole = async (req, res) => {
+    try {
+        if (!req.body.name) {
+            return res.status(400).json({message: "Role name is required"})
+        }
+
+        const existingRole = await Role.findOne({ name: req.body.name });
+        if (existingRole) {
+          return res.status(400).json({ message: "Role name is already in use!" });
+        }
+
+        const role = new Role({
+            name: req.body.name,
+            admin: req.body.admin || false // Default to false if not provided
+        });
+
+        const savedRole = await role.save();
+        res.status(201).json({ message: "Role created successfully!", role: savedRole });
+    } catch (error) {
+        console.error("Error creating role:", error);
+        res.status(500).json({ message: "Error creating role" });
+    }
 }

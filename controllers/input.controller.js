@@ -102,39 +102,39 @@ exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
 //Traer todos los registros con todos los privilegios posibles 07/01/2025 (FUNCIONANDO Y TERMINADO)
 exports.getNoDeletedInputs = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 50;
+        // const page = parseInt(req.query.page) || 1;
+        // const limit = parseInt(req.query.limit) || 50;
 
-        const search = req.query.search || '';
+        // const search = req.query.search || '';
         const query = { deleted: false };
-        let searchRegex = null;
+        // let searchRegex = null;
 
-        if (search) {
-            // Intenta convertir el término de búsqueda a un número
-            const searchAsNumber = Number(search);
+        // if (search) {
+        //     // Intenta convertir el término de búsqueda a un número
+        //     const searchAsNumber = Number(search);
       
-            if (!isNaN(searchAsNumber)) {
-              // Si es un número válido, busca por igualdad en el campo folio
-              query.folio = searchAsNumber;
-            } else {
-              try {
-                searchRegex = new RegExp(search, 'i');
-              } catch (e) {
-                return res.status(400).json({
-                  status: 'error',
-                  message: 'Expresión de búsqueda no válida.',
-                });
-              }
-              // Si no es un número, usa una expresión regular para los campos de texto
-              query.$or = [
-                { num_oficio: { $regex: searchRegex } },
-                { asunto: { $regex: searchRegex } },
-                { estatus: { $regex: searchRegex } },
-                { fecha_recepcion: { $regex: searchRegex } },
-                // ... otros campos de texto
-              ];
-            }
-          }
+        //     if (!isNaN(searchAsNumber)) {
+        //       // Si es un número válido, busca por igualdad en el campo folio
+        //       query.folio = searchAsNumber;
+        //     } else {
+        //       try {
+        //         searchRegex = new RegExp(search, 'i');
+        //       } catch (e) {
+        //         return res.status(400).json({
+        //           status: 'error',
+        //           message: 'Expresión de búsqueda no válida.',
+        //         });
+        //       }
+        //       // Si no es un número, usa una expresión regular para los campos de texto
+        //       query.$or = [
+        //         { num_oficio: { $regex: searchRegex } },
+        //         { asunto: { $regex: searchRegex } },
+        //         { estatus: { $regex: searchRegex } },
+        //         { fecha_recepcion: { $regex: searchRegex } },
+        //         // ... otros campos de texto
+        //       ];
+        //     }
+        //   }
 
         const projection = {
             anio: 1,
@@ -145,16 +145,17 @@ exports.getNoDeletedInputs = async (req, res) => {
             asunto: 1,
             estatus: 1,
             _id: 1,
+            'seguimientos.atencion_otorgada': 1,
         };
-
-        const inputs = await Input.find(query, projection)
-            .sort({ anio: -1, createdAt: -1 })
-            // .allowDiskUse(true)
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .lean();
-
+        // console.log(projection);
         const totalInputs = await Input.countDocuments(query);
+        
+        const inputs = await Input.find(query, projection)
+            .sort({ anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 })
+            // .allowDiskUse(true)
+            // .skip((page - 1))
+            // .limit(limit)
+            .lean();
 
         if (inputs.length === 0) {
             return res.status(204).json({
@@ -167,8 +168,6 @@ exports.getNoDeletedInputs = async (req, res) => {
             status: 'success',
             inputs: inputs,
             totalInputs: totalInputs,
-            totalPages: Math.ceil(totalInputs / limit),
-            currentPage: page,
         });
     } catch (error) {
         console.error(error);
@@ -178,6 +177,145 @@ exports.getNoDeletedInputs = async (req, res) => {
         });
     }
 },
+
+//Crear registros de entrada 21/01/2025 (FUNCIONANDO Y TERMINADO)
+exports.createInput = async (req, res) => {
+    try {
+        // 1. Validar la entrada (puedes usar express-validator para algo más complejo) || !req.body.create_user
+        if (!req.body.anio || !req.body.folio || !req.body.fecha_recepcion || !req.body.create_user ) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Los campos año, folio y fecha_recepcion son requeridos.',
+            });
+        }
+
+        // 2. Validar que el usuario que crea exista
+        if (!ObjectId.isValid(req.body.create_user.id)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'El id del usuario no es valido.',
+            });
+        }
+
+        // 3. Crear el nuevo registro
+        const newinput = new Input({
+            anio: req.body.anio,
+            folio: req.body.folio,
+            num_oficio: req.body.num_oficio,
+            fecha_oficio: req.body.fecha_oficio,
+            fecha_vencimiento: req.body.fecha_vencimiento,
+            fecha_recepcion: req.body.fecha_recepcion,
+            hora_recepcion: req.body.hora_recepcion,
+            instrumento_juridico: req.body.instrumento_juridico,
+            remitente: req.body.remitente,
+            institucion_origen: req.body.institucion_origen,
+            asunto: req.body.asunto,
+            asignado: req.body.asignado,
+            estatus: req.body.estatus,
+            observacion: req.body.observacion,
+            archivosPdf: req.body.archivosPdf || [],
+            create_user: req.body.create_user,
+            editor_user: req.body.editor_user,
+            edit_count: req.body.edit_count || 0,
+            deleted: req.body.deleted || false,
+        });
+
+        // 4. Guardar el registro en la base de datos
+        const savedInput = await newinput.save();
+
+        // 5. Responder al cliente
+        res.status(201).json({
+            status: 'success',
+            input: savedInput,
+            message: 'Registro creado exitosamente.',
+        });
+    } catch (error) {
+        console.error("Error en createInput:", error);
+
+        if (error.name === 'ValidationError') { 
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({ status: 'error', message: errors });
+        }
+
+        if (error.code === 11000 && error.keyPattern && error.keyPattern.num_oficio) {
+            return res.status(400).json({ status: 'error', message: 'El número de oficio ya existe.' });
+        }
+
+        res.status(500).json({
+            status: 'error',
+            message: 'Error al crear el registro.',
+        });
+    }
+};
+
+// Buscar registros pos id 22/01/2025 (FUNCIONANDO Y TERMINADO)
+exports.getInputById = async (req, res) => {
+    try {
+        const inputId = req.params.id;
+
+        // 1. Validar que el ID sea un ObjectId válido
+        if (!ObjectId.isValid(inputId)) {
+            return res.status(400).json({ status: 'error', message: 'ID de registro inválido.' });
+        }
+
+        // 2. Buscar el registro por ID y popular los campos de usuario
+        const input = await Input.findById(inputId).populate('create_user').populate('editor_user').lean();
+
+        // 3. Manejar el caso en que no se encuentra el registro
+        if (!input) {
+            return res.status(404).json({ status: 'error', message: 'Registro no encontrado.' });
+        }
+
+        // 4. Responder con el registro encontrado
+        res.status(200).json({ status: 'success', input });
+    } catch (error) {
+        console.error("Error en getInputById:", error);
+        res.status(500).json({ status: 'error', message: 'Error al obtener el registro.' });
+    }
+};
+
+// Actualizar registros por id 22/01/2025 (FUNCIONANDO Y TERMINADO)
+exports.updateInputById = async (req, res) => {
+    try {
+        const inputId = req.params.id;
+
+        if (!ObjectId.isValid(inputId)) {
+            return res.status(400).json({ status: 'error', message: 'ID de registro inválido.' });
+        }
+
+        // 1. Buscar el documento *antes* de actualizarlo para obtener el valor actual de edit_count
+        const existingInput = await Input.findById(inputId);
+
+        if (!existingInput) {
+            return res.status(404).json({ status: 'error', message: 'Registro no encontrado.' });
+        }
+
+        // 2. Incrementar edit_count
+        const newEditCount = (existingInput.edit_count || 0) + 1;
+
+        // 3. Realizar la actualización, incluyendo el nuevo valor de edit_count
+        const updatedInput = await Input.findByIdAndUpdate(
+            inputId,
+            { $set: { ...req.body, edit_count: newEditCount } }, // Incluye edit_count en la actualización
+            { new: true, runValidators: true }
+        ).populate('create_user').populate('editor_user').lean();
+
+        if (!updatedInput) {
+            return res.status(404).json({ status: 'error', message: 'Registro no encontrado.' });
+        }
+
+        res.status(200).json({ status: 'success', input: updatedInput });
+    } catch (error) {
+        console.error("Error en updateInput:", error);
+
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({ status: 'error', message: errors });
+        }
+
+        res.status(500).json({ status: 'error', message: 'Error al actualizar el registro.' });
+    }
+};
 
 // CONSIDERAR BORRAR
 exports.getNoDeletedInputsInTramitByNormalUsers = async (req, res) => {
@@ -297,6 +435,7 @@ exports.getInput = async (req, res) => {
     });
 },
 
+// CONSIDERAR BORRAR
 //Save document
 exports.saveInput = async (req, res) => {
     var params = req.body;
@@ -456,6 +595,7 @@ exports.findInput = async (req, res) => {
     });
 },
 
+// NO TOCAR LAS ULTIMAS 4 FUNCIONES
 exports.getAreasPerDay = async (req, res) => {
     const searchDay = req.params.search;
 

@@ -1,16 +1,12 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const usuarioSchema = new Schema({
-    id: { type: Schema.Types.ObjectId, required: true }, // Usa ObjectId para IDs
-    username: { type: String, required: true },
-    email: { type: String, required: true },
-    // accessToken: { type: String }, // Considera si realmente necesitas guardar el accessToken aquí. Por seguridad, es mejor manejarlo en la capa de autenticación.
-});
-
 const seguimientoSchema = new Schema({
     fecha_respuesta: { type: Date, default: Date.now },
-    usuario: { type: usuarioSchema, required: true }, // Referencia al usuario
+    usuario: {
+        id: String,
+        username: String,
+    },
     comentarios: { type: String, uppercase: true }, // Observaciones
     archivosPdf_seguimiento: [{ type: String }],
     num_expediente: {type: String, uppercase: true},
@@ -40,8 +36,14 @@ const inputSchema = new Schema({
     estatus: { type: String, uppercase: true },
     observacion: { type: String, uppercase: true },
     archivosPdf: [{ type: String }],
-    create_user: { type: usuarioSchema, required: true }, // Referencia al usuario que crea
-    editor_user: { type: usuarioSchema }, // Referencia al usuario que edita
+    create_user: { 
+        id: String,
+        username: String,
+    },
+    editor_user: { 
+        id: String,
+        username: String,
+    },
     edit_count: { type: Number, default: 0 },
     deleted: { type: Boolean, default: false, index: true },
     seguimientos: { type: seguimientoSchema },

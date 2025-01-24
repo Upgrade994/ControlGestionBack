@@ -4,113 +4,99 @@ const db = require("../models");
 const User = db.user;
 const Role = db.role;
 
-verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   let token = req.headers["x-access-token"];
 
   if (!token) {
     return res.status(403).send({ message: "No token provided!" });
   }
 
-  jwt.verify(token, config.secret, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ message: "Unauthorized!" });
-    }
+  try {
+    const decoded = await jwt.verify(token, config.secret);
     req.userId = decoded.id;
     next();
-  });
+  } catch (err) {
+    console.error("Error verifying token:", err);
+    return res.status(401).send({ message: "Unauthorized!" });
+  }
 };
 
-isAdmin = (req, res, next) => {
-  User.findById(req.userId).exec((err, user) => {
-    if (err) {
-      res.status(500).send({ message: err });
-      return;
+const isAdmin = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId).exec();
+    if (!user) {
+      return res.status(401).send({ message: "Unauthorized!" });
     }
 
-    Role.find(
-      {
-        _id: { $in: user.roles }
-      },
-      (err, roles) => {
-        if (err) {
-          res.status(500).send({ message: err });
-          return;
-        }
+    const roles = await Role.find({ _id: { $in: user.roles } });
+    if (!roles) {
+      return res.status(500).send({ message: "Error finding user roles!" });
+    }
 
-        for (let i = 0; i < roles.length; i++) {
-          if (roles[i].name === "admin") {
-            next();
-            return;
-          }
-        }
-
-        res.status(403).send({ message: "Require Admin Role!" });
+    for (const role of roles) {
+      if (role.name === "admin") {
+        next();
         return;
       }
-    );
-  });
+    }
+
+    return res.status(403).send({ message: "Require Admin Role!" });
+  } catch (err) {
+    console.error("Error checking admin role:", err);
+    return res.status(500).send({ message: "Internal Server Error!" });
+  }
 };
 
-isModerator = (req, res, next) => {
-  User.findById(req.userId).exec((err, user) => {
-    if (err) {
-      res.status(500).send({ message: err });
-      return;
+const isModerator = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId).exec();
+    if (!user) {
+      return res.status(401).send({ message: "Unauthorized!" });
     }
 
-    Role.find(
-      {
-        _id: { $in: user.roles }
-      },
-      (err, roles) => {
-        if (err) {
-          res.status(500).send({ message: err });
-          return;
-        }
+    const roles = await Role.find({ _id: { $in: user.roles } });
+    if (!roles) {
+      return res.status(500).send({ message: "Error finding user roles!" });
+    }
 
-        for (let i = 0; i < roles.length; i++) {
-          if (roles[i].name === "moderator") {
-            next();
-            return;
-          }
-        }
-
-        res.status(403).send({ message: "Require Moderator Role!" });
+    for (const role of roles) {
+      if (role.name === "moderator") {
+        next();
         return;
       }
-    );
-  });
+    }
+
+    return res.status(403).send({ message: "Require Moderator Role!" });
+  } catch (err) {
+    console.error("Error checking moderator role:", err);
+    return res.status(500).send({ message: "Internal Server Error!" });
+  }
 };
 
-isLinker = (req, res, next) => {
-  User.findById(req.userId).exec((err, user) => {
-    if (err) {
-      res.status(500).send({ message: err });
-      return;
+const isLinker = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId).exec();
+    if (!user) {
+      return res.status(401).send({ message: "Unauthorized!" });
     }
 
-    Role.find(
-      {
-        _id: { $in: user.roles }
-      },
-      (err, roles) => {
-        if (err) {
-          res.status(500).send({ message: err });
-          return;
-        }
+    const roles = await Role.find({ _id: { $in: user.roles } });
+    if (!roles) {
+      return res.status(500).send({ message: "Error finding user roles!" });
+    }
 
-        for (let i = 0; i < roles.length; i++) {
-          if (roles[i].name === "linker") {
-            next();
-            return;
-          }
-        }
-
-        res.status(403).send({ message: "Require Linker Role!" });
+    for (const role of roles) {
+      if (role.name === "linker") {
+        next();
         return;
       }
-    );
-  });
+    }
+
+    return res.status(403).send({ message: "Require Linker Role!" });
+  } catch (err) {
+    console.error("Error checking linker role:", err);
+    return res.status(500).send({ message: "Internal Server Error!" });
+  }
 };
 
 const authJwt = {
@@ -119,4 +105,5 @@ const authJwt = {
   isModerator,
   isLinker
 };
+
 module.exports = authJwt;
