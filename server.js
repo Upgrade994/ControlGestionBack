@@ -2,42 +2,49 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const dbConfig = require("./config/db.config");
+const db = require("./models");
+const initializeRoles = require("./utils/initializeRoles");
+const initializeAreas = require("./utils/initializeAreas");
 
 const app = express();
 
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Request-Method');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
-  res.header('Allow', 'GET, POST, OPTIONS, PUT, DELETE');
-  next();
-});
+// Configuración de CORS simplificada
+const corsOptions = {
+    origin: "*", // O una lista de orígenes específicos para mayor seguridad
+    methods: "GET, POST, OPTIONS, PUT, DELETE",
+    allowedHeaders: "Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept"
+};
+
+app.use(cors(corsOptions));
 
 // parse requests of content-type - application/json
-app.use(bodyParser.json({limit: '50mb', extended: true}));
+app.use(bodyParser.json({ limit: '5mb' })); // No es necesario extended: true a menos que uses objetos anidados complejos
+app.use(bodyParser.urlencoded({ limit: "5mb", extended: true, parameterLimit: 50000 }));
+app.use(bodyParser.text({ limit: '20mb' }));
 
-// parse requests of content-type - application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({limit: "50mb", extended: true, parameterLimit:50000}));
-app.use(bodyParser.text({ limit: '200mb' }));
-
-const db = require("./models");
-const Role = db.role;
-
-// Conexión a la base de datos con async/await y manejo de errores
+// Conexión a la base de datos con reintentos
 async function connectToDatabase() {
-  try {
-      await db.mongoose.connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`);
-      console.log("Successfully connected to MongoDB.");
-      await initial(); // Inicializar roles después de la conexión exitosa
-  } catch (error) {
-      console.error("Connection error:", error);
-      process.exit(1); // Salir con código de error
-  }
+    let retries = 5;
+    while (retries > 0) {
+        try {
+            await db.mongoose.connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`);
+            console.log("Successfully connected to MongoDB.");
+            await initializeRoles();
+            await initializeAreas();
+            return;
+        } catch (error) {
+            console.error(`Connection error (retries left: ${retries}):`, error);
+            retries--;
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos antes de reintentar
+        }
+    }
+    console.error("Failed to connect to MongoDB after multiple retries.");
+    process.exit(1);
 }
 
 // simple route
 app.get("/", (req, res) => {
-  res.json({ message: "Bienvenido al Sistema de Control de Gestion" });
+    res.json({ message: "Bienvenido al Sistema de Control de Gestion" });
 });
 
 // routes
@@ -45,31 +52,14 @@ require("./routes/auth.routes")(app);
 require("./routes/user.routes")(app);
 require("./routes/input.routes")(app);
 require("./routes/rol.routes")(app);
-// require("./routes/area.routes")(app);
+require("./routes/area.routes")(app);
 require("./routes/institution.routes")(app);
 require("./routes/instrument.routes")(app);
 
 // Iniciar el servidor DESPUÉS de conectar a la base de datos
 const PORT = process.env.PORT || 8082;
-connectToDatabase().then(() => { // Espera a que la conexión se establezca
+connectToDatabase().then(() => {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}.`);
     });
 });
-
-async function initial() {
-  try {
-      const count = await Role.estimatedDocumentCount(); // Usando await
-      if (count === 0) {
-          await Role.create([ // Usando await también para Role.create()
-              { name: "user" },
-              { name: "linker" },
-              { name: "moderator" },
-              { name: "admin" }
-          ]);
-          console.log("Added roles to collection");
-      }
-  } catch (error) {
-      console.error("Error initializing roles:", error);
-  }
-}

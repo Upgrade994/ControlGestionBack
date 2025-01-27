@@ -40,7 +40,7 @@ exports.signup = async (req, res) => {
         return res.status(400).send({ message: "Failed to find specified roles!" });
       }
 
-      const roleIds = roles.map(role => mongoose.Types.ObjectId(role._id)); // Cast to ObjectIds
+      const roleIds = roles.map(role => new mongoose.Types.ObjectId(role._id));
       user.roles = roleIds;
     } else {
       // Assign default role (e.g., "user")

@@ -1,316 +1,75 @@
 const Institution = require ("../models/institution.models");
-var validator = require("validator");
-const NodeCache = require('node-cache');
-const cache = new NodeCache();
-const cacheTimeout = 60;
+const mongoose = require('mongoose');
 
-//Get all no deleted institution documents
+const isValidObjectId = (id) => {
+    return mongoose.Types.ObjectId.isValid(id);
+};
+
 exports.getAllNoDeletedInstitution = async (req, res) => {
-    const cacheKey = 'institutions';
-    let institutions = cache.get(cacheKey);
-
-    if (!institutions) {
-        try {
-          institutions = await Institution.find({ deleted: false }).sort({ name: 1 }).lean().exec();
-          cache.set(cacheKey, institutions, cacheTimeout);
-        } catch (error) {
-          return res.status(500).send({
-            status: 'error',
-            message: 'Error al devolver el registro!',
-          });
-        }
-    }
-
-    if (institutions.length === 0) {
-        return res.status(404).send({
-            status: 'error',
-            message: 'No existen registros!',
-        });
-    }
-
-    return res.status(200).send({
-        status: 'success',
-        institution: institutions,
-    });
-},
-
-//Get all deleted institution documents
-exports.getAllDeletedInstitution = async (req, res) => {
-    const cacheKey = 'institutions';
-    let institutions = cache.get(cacheKey);
-
-    if (!institutions) {
-        try {
-          institutions = await Institution.find({ deleted: true }).sort({ name: 1 }).lean().exec();
-          cache.set(cacheKey, institutions, cacheTimeout);
-        } catch (error) {
-          return res.status(500).send({
-            status: 'error',
-            message: 'Error al devolver el registro!',
-          });
-        }
-    }
-
-    if (institutions.length === 0) {
-        return res.status(404).send({
-            status: 'error',
-            message: 'No existen registros!',
-        });
-    }
-
-    return res.status(200).send({
-        status: 'success',
-        institution: institutions,
-    });
-},
-
-//Get only one institution
-exports.getInstitution = async (req, res) => {
-    const institutionId = req.params.id;
-
-    if (!institutionId || institutionId == null) {
-        return res.status(404).send({
-            status: 'error',
-            message: 'No existe el reigstro'
-        });
-    }
-
-    await new Promise((resolve) => {
-        Institution.findById(institutionId, (err, institution) => {
-            if (err || !institution) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existe el registro.'
-                });
-            }
-    
-            return res.status(200).send({
-                status: 'success',
-                institution
-            });
-        });
-    });
-},
-
-//Update One Institution
-exports.updateInstitution = async (req, res) => {
-    const institutionId = req.params.id;
-    const params = req.body;
-
     try {
-        var validate_name = !validator.isEmpty(params.name);
+        const institutions = await Institution.find({ deleted: false }).sort({ name: 1 }).lean().exec();
+        res.status(200).json({ status: 'success', institutions });
     } catch (error) {
-        return res.status(404).send({
-            status: 'error',
-            message: 'Faltan datos por enviar'
-        });
+        console.error("Error obteniendo las instituciones:", error);
+        res.status(500).json({ status: 'error', message: 'Error al obtener las instituciones' });
     }
-
-    if (validate_name) {
-        await new Promise((resolve) => {
-            Institution.findOneAndUpdate({_id: institutionId}, params, { new: true }, (err, institution) => {
-                if (err) {
-                    return res.status(500).send({
-                        status: 'error',
-                        message: 'Error al actualizar'
-                    });
-                }
-    
-                if (!institution) {
-                    return res.status(404).send({
-                        status: 'error',
-                        message: 'No existe el registro'
-                    });
-                }
-    
-                return res.status(200).send({
-                    status: 'success',
-                    institution
-                });
-            });
-        });
-    } else {
-        return res.status(500).send({
-            status: 'error',
-            message: 'La validacion no es correcta'
-        });
-    }
-},
-
-//Update many Institutions
-exports.updateManyInstitutions = async (req, res) => {
-    const institutionId = req.params.id;
-    const params = req.body;
-
-    try {
-        var validate_name = !validator.isEmpty(params.name);
-    } catch (error) {
-        return res.status(404).send({
-            status: 'error',
-            message: 'Faltan datos por enviar'
-        });
-    }
-
-    if (validate_name) {
-        await new Promise((resolve) => {
-            Institution.updateMany({_id: institutionId}, params, { new: true }, (err, institution) => {
-                if (err) {
-                    return res.status(500).send({
-                        status: 'error',
-                        message: 'Error al actualizar'
-                    });
-                }
-    
-                if (!institution) {
-                    return res.status(404).send({
-                        status: 'error',
-                        message: 'No existe el registro'
-                    });
-                }
-    
-                return res.status(200).send({
-                    status: 'success',
-                    institution
-                });
-            });
-        });
-    } else {
-        return res.status(500).send({
-            status: 'error',
-            message: 'La validacion no es correcta'
-        });
-    }
-},
-
-//Save one Institution
-exports.saveInstitution = async (req, res) => {
-    const params = req.body;
-
-    try {
-        var validate_name = !validator.isEmpty(params.name);
-    } catch (error) {
-        return res.status(200).send({
-            message: 'Faltan datos por enviar'
-        });
-    }
-
-    if (validate_name) {
-        const institution = new Institution();
-
-        institution.name = params.name;
-        institution.deleted = false;
-
-        await new Promise((resolve) => {
-            institution.save((err, institution) => {
-                if (err || !institution) {
-                    return res.status(404).send({
-                        status: 'error',
-                        message: 'El registro no se ha guardado'
-                    });
-                }
-    
-                return res.status(200).send({
-                    status: 'Success',
-                    institution: institution
-                });
-            });
-        });
-    } else {
-        return res.status(424).send({
-            status: "error",
-            message: "El registro no es valido"
-        });
-    }
-},
-
-//Save many Institutions
-exports.saveManyInstitutions = async (req, res) => {
-    const params = req.body;
-
-    try {
-        var validate_name = !validator.isEmpty(params.name);
-    } catch (error) {
-        return res.status(200).send({
-            message: 'Faltan datos por enviar'
-        });
-    }
-
-    if (validate_name) {
-        const institution = new Institution();
-
-        institution.name = params.name;
-
-        await new Promise((resolve) => {
-            institution.insertMany((err, institution) => {
-                if (err || !institution) {
-                    return res.status(404).send({
-                        status: 'error',
-                        message: 'El registro no se ha guardado'
-                    });
-                }
-    
-                return res.status(200).send({
-                    status: 'Success',
-                    institution: institution
-                });
-            });
-        });
-    } else {
-        return res.status(424).send({
-            status: "error",
-            message: "El registro no es valido"
-        });
-    }
-},
-
-//Delete one institution
-exports.deleteOneInstitution = async (req, res) => {
-    const institutionId = req.params.id;
-
-    await new Promise((resolve) => {
-        Institution.findByIdAndDelete({_id: institutionId}, (err, institution) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al borrar el registro'
-                });
-            }
-            if (!institution) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existe el registro'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                institution
-            });
-        });
-    });
-},
-
-//Delete many institutions
-exports.deleteManyInstitutions = async (req, res) => {
-    const institutionId = req.params.id;
-
-    await new Promise((resolve) => {
-        Institution.deleteMany({_id: institutionId}, (err, institution) => {
-            if (err) {
-                return res.status(500).send({
-                    status: 'error',
-                    message: 'Error al borrar el registro'
-                });
-            }
-            if (!institution) {
-                return res.status(404).send({
-                    status: 'error',
-                    message: 'No existe el registro'
-                });
-            }
-            return res.status(200).send({
-                status: 'success',
-                institution
-            });
-        });
-    });
 }
+
+exports.saveInstitution = async (req, res) => {
+    try {
+        if (!req.body.institution) {
+            return res.status(400).json({ status: 'error', message: 'El nombre del área es requerido' });
+        }
+
+        const institucionExistente = await Institution.findOne({ institution: req.body.institution });
+        if (institucionExistente) {
+            return res.status(400).json({ status: 'error', message: 'Ya existe un área con ese nombre' });
+        }
+
+        const nuevaInstitucion = new Institution({ institution: req.body.institution });
+        const institucionGuardada = await nuevaInstitucion.save();
+
+        res.status(201).json({ status: 'success', message: 'Área creada con éxito', institution: institucionGuardada });
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            const erroresValidacion = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ status: 'error', message: erroresValidacion });
+        }
+        console.error("Error guardando el área:", error);
+        res.status(500).json({ status: 'error', message: 'Error al guardar el área' });
+    }
+};
+
+exports.updateInstitution = async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      if (!isValidObjectId(id)) {
+          return res.status(400).json({ status: 'error', message: 'ID de área no válido' });
+      }
+
+        if (!req.body.institution) {
+            return res.status(400).json({ status: 'error', message: 'El nombre del área es requerido' });
+        }
+
+        const institucionExistente = await Institution.findOne({ institution: req.body.institution, _id: { $ne: id } });
+        if (institucionExistente) {
+            return res.status(400).json({ status: 'error', message: 'Ya existe un área con ese nombre' });
+        }
+
+        const institucionActualiada = await Institution.findByIdAndUpdate(id, { institution: req.body.institution }, { new: true, runValidators: true });
+
+        if (!institucionActualiada) {
+            return res.status(404).json({ status: 'error', message: 'Área no encontrada' });
+        }
+
+        res.status(200).json({ status: 'success', message: 'Área actualizada con éxito', institution: institucionActualiada });
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            const erroresValidacion = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({ status: 'error', message: erroresValidacion });
+        }
+        console.error("Error actualizando el área:", error);
+        res.status(500).json({ status: 'error', message: 'Error al actualizar el área' });
+    }
+};

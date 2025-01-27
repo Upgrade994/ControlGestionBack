@@ -2,108 +2,53 @@ const jwt = require("jsonwebtoken");
 const config = require("../config/auth.config.js");
 const db = require("../models");
 const User = db.user;
-const Role = db.role;
 
-const verifyToken = async (req, res, next) => {
-  let token = req.headers["x-access-token"];
+const verifyToken = (req, res, next) => {
+    let token = req.headers["x-access-token"];
 
-  if (!token) {
-    return res.status(403).send({ message: "No token provided!" });
-  }
-
-  try {
-    const decoded = await jwt.verify(token, config.secret);
-    req.userId = decoded.id;
-    next();
-  } catch (err) {
-    console.error("Error verifying token:", err);
-    return res.status(401).send({ message: "Unauthorized!" });
-  }
-};
-
-const isAdmin = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.userId).exec();
-    if (!user) {
-      return res.status(401).send({ message: "Unauthorized!" });
+    if (!token) {
+        return res.status(403).json({ message: "No token provided!" }); // Usar json()
     }
 
-    const roles = await Role.find({ _id: { $in: user.roles } });
-    if (!roles) {
-      return res.status(500).send({ message: "Error finding user roles!" });
-    }
-
-    for (const role of roles) {
-      if (role.name === "admin") {
+    jwt.verify(token, config.secret, (err, decoded) => { // Usar callback para evitar async/await innecesario
+        if (err) {
+            console.error("Token verification error:", err); // Log detallado del error
+            return res.status(401).json({ message: "Unauthorized!" }); // Usar json()
+        }
+        req.userId = decoded.id;
         next();
-        return;
-      }
-    }
-
-    return res.status(403).send({ message: "Require Admin Role!" });
-  } catch (err) {
-    console.error("Error checking admin role:", err);
-    return res.status(500).send({ message: "Internal Server Error!" });
-  }
+    });
 };
 
-const isModerator = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.userId).exec();
-    if (!user) {
-      return res.status(401).send({ message: "Unauthorized!" });
-    }
+const checkRole = (roleName) => async (req, res, next) => { // Función genérica para verificar roles
+    try {
+        const user = await User.findById(req.userId).populate("roles").lean(); // populate y lean para eficiencia
+        if (!user) {
+            return res.status(401).json({ message: "Unauthorized!" });
+        }
 
-    const roles = await Role.find({ _id: { $in: user.roles } });
-    if (!roles) {
-      return res.status(500).send({ message: "Error finding user roles!" });
+        const hasRole = user.roles.some(role => role.name === roleName);
+        if (hasRole) {
+            next();
+        } else {
+            return res.status(403).json({ message: `Require ${roleName} Role!` });
+        }
+    } catch (err) {
+        console.error(`Error checking ${roleName} role:`, err);
+        return res.status(500).json({ message: "Internal Server Error!" });
     }
-
-    for (const role of roles) {
-      if (role.name === "moderator") {
-        next();
-        return;
-      }
-    }
-
-    return res.status(403).send({ message: "Require Moderator Role!" });
-  } catch (err) {
-    console.error("Error checking moderator role:", err);
-    return res.status(500).send({ message: "Internal Server Error!" });
-  }
 };
 
-const isLinker = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.userId).exec();
-    if (!user) {
-      return res.status(401).send({ message: "Unauthorized!" });
-    }
+const isAdmin = checkRole("admin");
+const isModerator = checkRole("moderator");
+const isLinker = checkRole("linker");
 
-    const roles = await Role.find({ _id: { $in: user.roles } });
-    if (!roles) {
-      return res.status(500).send({ message: "Error finding user roles!" });
-    }
-
-    for (const role of roles) {
-      if (role.name === "linker") {
-        next();
-        return;
-      }
-    }
-
-    return res.status(403).send({ message: "Require Linker Role!" });
-  } catch (err) {
-    console.error("Error checking linker role:", err);
-    return res.status(500).send({ message: "Internal Server Error!" });
-  }
-};
 
 const authJwt = {
-  verifyToken,
-  isAdmin,
-  isModerator,
-  isLinker
+    verifyToken,
+    isAdmin,
+    isModerator,
+    isLinker
 };
 
 module.exports = authJwt;
