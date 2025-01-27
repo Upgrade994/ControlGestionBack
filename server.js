@@ -23,18 +23,6 @@ app.use(bodyParser.text({ limit: '200mb' }));
 const db = require("./models");
 const Role = db.role;
 
-// db.mongoose
-//   .connect(`mongodb://${dbConfig.HOST}:${dbConfig.PORT}/${dbConfig.DB}`)
-//   .then(() => {
-//     console.log("Successfully connect to MongoDB.");
-//     initial();
-//   })
-//   .catch(err => {
-//     console.log(dbConfig);
-//     console.error("Connection error", err);
-//     process.exit();
-//   });
-
 // Conexión a la base de datos con async/await y manejo de errores
 async function connectToDatabase() {
   try {
@@ -57,15 +45,9 @@ require("./routes/auth.routes")(app);
 require("./routes/user.routes")(app);
 require("./routes/input.routes")(app);
 require("./routes/rol.routes")(app);
-require("./routes/area.routes")(app);
+// require("./routes/area.routes")(app);
 require("./routes/institution.routes")(app);
 require("./routes/instrument.routes")(app);
-
-// set port, listen for requests
-// const PORT = process.env.PORT || 8082;
-// app.listen(PORT, () => {
-//   console.log(`Server is running on port ${PORT}.`);
-// });
 
 // Iniciar el servidor DESPUÉS de conectar a la base de datos
 const PORT = process.env.PORT || 8082;
@@ -74,48 +56,6 @@ connectToDatabase().then(() => { // Espera a que la conexión se establezca
         console.log(`Server is running on port ${PORT}.`);
     });
 });
-
-// function initial() {
-//   Role.estimatedDocumentCount((err, count) => {
-//     if (!err && count === 0) {
-//       new Role({
-//         name: "user"
-//       }).save(err => {
-//         if (err) {
-//           console.log("error", err);
-//         }
-//         console.log("added 'user' to roles collection");
-//       });
-
-//       new Role({
-//         name: "linker"
-//       }).save(err => {
-//         if (err) {
-//           console.log("error", err);
-//         }
-//         console.log("added 'linker' to roles collection");
-//       });
-
-//       new Role({
-//         name: "moderator"
-//       }).save(err => {
-//         if (err) {
-//           console.log("error", err);
-//         }
-//         console.log("added 'moderator' to roles collection");
-//       });
-
-//       new Role({
-//         name: "admin"
-//       }).save(err => {
-//         if (err) {
-//           console.log("error", err);
-//         }
-//         console.log("added 'admin' to roles collection");
-//       });
-//     }
-//   });
-// }
 
 async function initial() {
   try {
