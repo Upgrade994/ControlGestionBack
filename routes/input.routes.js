@@ -15,6 +15,10 @@ module.exports = function(app){
     app.post("/api/create_inputs", inputController.createInput);
     app.get("/api/inputById/:id", inputController.getInputById);
     app.patch("/api/updateInputById/:id", inputController.updateInputById);
+    app.get("/api/pdfs/:id", inputController.getPdfsByIdInput);
+    app.get("/api/pdfs/:id/download", inputController.getPdfByIdInput);
+    app.get("/api/pdfs_seguimiento/:id/download", inputController.getPdfByIdSeguimiento);
+    app.get('/api/inputs_oficio/:id/duplicados', inputController.getDuplicatedOficiosByInputId);
 
     app.get('/api/inputs/areas/:search?', inputController.getAreasPerDay);
     app.get("/api/inputs-by-estatus", inputController.getEstatusPerArea);

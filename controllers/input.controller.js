@@ -7,6 +7,82 @@ const path = require('path');
 const fs = require('fs');
 const { ObjectId } = require('mongodb');
 
+exports.getPdfsByIdInput = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validación y búsqueda del registro
+        const input = await Input.findById(id);
+        if (!input) {
+            return res.status(404).json({ error: 'Registro no encontrado' });
+        }
+
+        // Obtener el array de rutas y transformarlo en un array de objetos con más información
+        const pdfData = input.archivosPdf.map(path => ({
+            path,
+            name: path.split('\\').pop(), // Obtener el nombre del archivo
+            size: fs.statSync(path).size // Obtener el tamaño del archivo
+        }));
+
+        return res.json(pdfData);
+    } catch (error) {
+        console.error('Error al obtener la lista de PDFs:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+exports.getPdfByIdInput = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { filename } = req.query;
+
+        // Validación y búsqueda del registro
+        const input = await Input.findById(id);
+        if (!input) {
+            return res.status(404).json({ error: 'Registro no encontrado' });
+        }
+
+        // Encontrar el archivo específico
+        const pdfPath = input.archivosPdf.find(path => path.endsWith(filename));
+        if (!pdfPath) {
+            return res.status(404).json({ error: 'Archivo no encontrado' });
+        }
+
+        // Servir el archivo
+        res.setHeader('Content-Type', 'application/pdf');
+        fs.createReadStream(pdfPath).pipe(res);
+    } catch (error) {
+        console.error('Error al servir el archivo PDF:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+exports.getPdfByIdSeguimiento = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { filename } = req.query;
+
+        // Validación y búsqueda del registro
+        const input = await Input.findById(id);
+        if (!input) {
+            return res.status(404).json({ error: 'Registro no encontrado' });
+        }
+
+        // Encontrar el archivo específico
+        const pdfPath = input.seguimientos.archivosPdf_seguimiento.find(path => path.endsWith(filename));
+        if (!pdfPath) {
+            return res.status(404).json({ error: 'Archivo no encontrado' });
+        }
+
+        // Servir el archivo
+        res.setHeader('Content-Type', 'application/pdf');
+        fs.createReadStream(pdfPath).pipe(res);
+    } catch (error) {
+        console.error('Error al servir el archivo PDF:', error);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
 //Traer todos los registros con privilegios de enlace, informacion por area 08/01/2025 (FUNCIONANDO Y TERMINADO)
 exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
     let areaUsuario;
@@ -25,38 +101,8 @@ exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
         });
     }
 
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
-    const search = req.query.search || '';
-
     try {
         const query = { deleted: false, asignado: areaUsuario };
-        let searchRegex = null;
-
-        if (search) {
-            const searchAsNumber = Number(search);
-
-            if (!isNaN(searchAsNumber)) {
-                query.folio = searchAsNumber;
-            } else {
-                try {
-                    searchRegex = new RegExp(search, 'i'); // 'i' para búsqueda insensible a mayúsculas/minúsculas
-                } catch (e) {
-                    return res.status(400).json({
-                        status: 'error',
-                        message: 'Expresión de búsqueda no válida.',
-                    });
-                }
-                query.$or = [
-                    { num_oficio: { $regex: searchRegex } },
-                    { asunto: { $regex: searchRegex } },
-                    { estatus: { $regex: searchRegex } },
-                    { fecha_recepcion: { $regex: searchRegex } },
-                    // Agrega aquí otros campos de texto en los que deseas buscar
-                ];
-            }
-        }
 
         const totalInputs = await Input.countDocuments(query); // Contar documentos con el filtro
 
@@ -69,14 +115,14 @@ exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
             asunto: 1,
             estatus: 1,
             _id: 1,
-            // archivosPdf: 1,
+            'seguimientos.atencion_otorgada': 1,
         };
 
         const inputs = await Input.find(query, projection)
-            .sort({ anio: -1, createdAt: -1 })
+            .sort({ anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 })
             // .allowDiskUse(true)
-            .skip(skip)
-            .limit(limit)
+            // .skip(skip)
+            // .limit(limit)
             .lean();
 
         if (inputs.length === 0) {
@@ -87,8 +133,6 @@ exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
             status: 'success',
             inputs: inputs,
             totalInputs: totalInputs,
-            totalPages: Math.ceil(totalInputs / limit),
-            currentPage: page,
         });
     } catch (error) {
         console.error("Error en getNoDeletedInputsByNormalUsers:", error);
@@ -236,6 +280,71 @@ exports.getInputById = async (req, res) => {
     } catch (error) {
         console.error("Error en getInputById:", error);
         res.status(500).json({ status: 'error', message: 'Error al obtener el registro.' });
+    }
+};
+
+exports.getDuplicatedOficiosByInputId = async (req, res) => {
+    try {
+        const inputId = req.params.id;
+
+        // 1. Validar que el ID sea un ObjectId válido
+        if (!ObjectId.isValid(inputId)) {
+            return res.status(400).json({ status: 'error', message: 'ID de registro inválido.' });
+        }
+
+        const aggregationPipeline = [
+            {
+                $match: { _id: new ObjectId(inputId), deleted: false } // Filtra primero por el inputId
+            },
+            {
+                $lookup: { // Nueva etapa $lookup para traer los documentos originales
+                    from: "inputs", // Nombre de tu colección
+                    let: { num_oficio: "$num_oficio" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$num_oficio", "$$num_oficio"] }
+                            }
+                        },
+                        {
+                            $project: { // Proyecta los campos que necesitas
+                                _id: 1,
+                                num_oficio: 1,
+                                folio: 1,
+                                asignado: 1
+                            }
+                        }
+                    ],
+                    as: "duplicados"
+                }
+            },
+            {
+                $unwind: "$duplicados" // Desenrolla el array de duplicados para que cada documento esté en su propio objeto
+            },
+            {
+                $group: { // Agrupa por num_oficio para mostrar todos los documentos con el mismo num_oficio
+                    _id: "$duplicados.num_oficio",
+                    num_oficio: { $first: "$duplicados.num_oficio" },
+                    duplicados: { $push: "$duplicados" }
+                }
+            },
+            {
+                $project: { // Da formato a la salida
+                    _id: 0,
+                    num_oficio: 1,
+                    duplicados: 1
+                }
+            }
+        ];
+
+        const result = await Input.aggregate(aggregationPipeline);
+
+        // 3. Responder con los resultados
+        res.status(200).json({ status: 'success', duplicados: result });
+
+    } catch (error) {
+        console.error("Error en getDuplicatedOficiosByInputId:", error);
+        res.status(500).json({ status: 'error', message: 'Error al obtener los números de oficio duplicados.' });
     }
 };
 

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const seguimientoSchema = new Schema({
+    oficio_salida: { type: String },
     fecha_respuesta: { type: Date, default: Date.now },
     usuario: {
         id: String,
@@ -52,5 +53,7 @@ const inputSchema = new Schema({
 // Índices compuestos (mejorados)
 inputSchema.index({ anio: -1, createdAt: -1 });
 inputSchema.index({ deleted: 1, anio: -1, createdAt: -1 });
+inputSchema.index({ num_oficio: 1 });
+inputSchema.index({ num_oficio: 1, deleted: 1 });
 
 module.exports = mongoose.model('InputsNuevo', inputSchema);

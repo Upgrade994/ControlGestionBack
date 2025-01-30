@@ -47,17 +47,16 @@ async function guardarPDF(base64String, registroAntiguo, esSeguimiento = false) 
         const buffer = Buffer.from(base64String, 'base64');
 
         // Obtiene los datos para la ruta
-        const asignado = registroAntiguo.asignado || 'SinAsignar'; // Manejo de valores nulos
+        const asignado = registroAntiguo.asignado || 'SinAsignar';
         const fechaRecepcion = registroAntiguo.fecha_recepcion ? new Date(registroAntiguo.fecha_recepcion) : null;
         if (!fechaRecepcion) {
             await log(`Error: fecha_recepcion inválida para _id: ${registroAntiguo._id}`);
             return null;
         }
         const anio = fechaRecepcion.getFullYear();
-        const mes = String(fechaRecepcion.getMonth() + 1).padStart(2, '0'); // <-- Cambio clave
-        const dia = fechaRecepcion.getDate();
+        const mes = String(fechaRecepcion.getMonth() + 1).padStart(2, '0');
+        const dia = fechaRecepcion.getDate() + 1;
         const folio = registroAntiguo.folio || 'SinFolio';
-        const nombreArchivo = `${dia}_${folio}.pdf`;
 
         // Construye la ruta base
         let rutaBase = path.join('C:', 'Control_Gestion_pdfs', asignado, String(anio), String(mes));
@@ -70,12 +69,27 @@ async function guardarPDF(base64String, registroAntiguo, esSeguimiento = false) 
         // Crea las carpetas recursivamente
         await fsPromises.mkdir(rutaBase, { recursive: true });
 
-        const rutaCompleta = path.join(rutaBase, nombreArchivo);
+        // Genera nombres de archivo únicos
+        let contador = 1;
+        let rutaCompleta;
+
+        do {
+            const nombreArchivo = `${dia}_${folio}_${String(contador).padStart(3, '0')}.pdf`;
+            rutaCompleta = path.join(rutaBase, nombreArchivo);
+
+            // Verifica si el archivo ya existe
+            try {
+                await fsPromises.access(rutaCompleta);
+                contador++;
+            } catch (error) {
+                // El archivo no existe, podemos usar esta ruta
+                break;
+            }
+        } while (true);
+
         await fsPromises.writeFile(rutaCompleta, buffer);
 
-        // Devuelve la ruta relativa (si es necesario) o la absoluta
-        return rutaCompleta; // Devuelve la ruta absoluta
-       // return path.relative(__dirname, rutaCompleta) //Devuelve la ruta relativa
+        return rutaCompleta;
     } catch (error) {
         await log(`Error al guardar PDF para _id: ${registroAntiguo._id}: ${error}`);
         return null;
@@ -121,9 +135,23 @@ async function migrarDatos() {
             // Transformación y operaciones bulkWrite concurrentes
             const promesasBulkWrite = registrosConPDFs.map(async ({ registroAntiguo, archivoPdf, archivoSegPdf }) => {
                 try {
+                    const fechaRecepcion = convertirFecha(registroAntiguo.fecha_recepcion);
+                    let estatus = registroAntiguo.estatus;
+
+                    // Actualiza el estatus según las reglas
+                    if (estatus === "PARA CONOCIMIENTO" || estatus === "CONCLUIDO") {
+                        estatus = "ATENDIDO";
+                    } else if (estatus === "EN TRAMITE") {
+                        estatus = "NO ATENDIDO";
+                    } else {
+                        // Si no es ninguno de los valores anteriores, se establece como "NO ATENDIDO"
+                        estatus = "NO ATENDIDO";
+                        await log(`Advertencia: Estatus desconocido '${registroAntiguo.estatus}' para _id: ${registroAntiguo._id}. Se ha establecido como 'NO ATENDIDO'.`);
+                    }
+
                     const nuevoRegistro = {
                         _id: registroAntiguo._id,
-                        anio: registroAntiguo.anio,
+                        anio: registroAntiguo.anio || (fechaRecepcion && fechaRecepcion.getFullYear()),
                         folio: registroAntiguo.folio,
                         num_oficio: registroAntiguo.num_oficio,
                         fecha_recepcion: convertirFecha(registroAntiguo.fecha_recepcion),
@@ -135,7 +163,7 @@ async function migrarDatos() {
                         institucion_origen: registroAntiguo.institucion_origen,
                         asunto: registroAntiguo.asunto,
                         asignado: registroAntiguo.asignado,
-                        estatus: registroAntiguo.estatus,
+                        estatus: estatus,
                         observacion: registroAntiguo.observacion,
                         archivosPdf: archivoPdf ? [archivoPdf] : [], // Guarda la ruta
                         create_user: transformarUsuario(registroAntiguo.create_user),
@@ -194,8 +222,9 @@ function transformarUsuario(usuarioAntiguo) {
 }
 
 function transformarSeguimiento(registroAntiguo, archivoSegPdf) {
-    if (!registroAntiguo.seg_oficio_salida) return null;
+    // if (!registroAntiguo.seg_oficio_salida) return null;
     return {
+        oficio_salida: registroAntiguo.seg_oficio_salida || "",
         fecha: convertirFecha(registroAntiguo.seg_fecha_oficio_salida),
         fecha_oficio_salida: convertirFecha(registroAntiguo.seg_fecha_oficio_salida),
         fecha_acuse_recibido: convertirFecha(registroAntiguo.seg_fecha_acuse_recibido),
