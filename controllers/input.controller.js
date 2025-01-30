@@ -36,21 +36,39 @@ exports.getPdfByIdInput = async (req, res) => {
         const { id } = req.params;
         const { filename } = req.query;
 
-        // Validación y búsqueda del registro
         const input = await Input.findById(id);
         if (!input) {
             return res.status(404).json({ error: 'Registro no encontrado' });
         }
 
-        // Encontrar el archivo específico
         const pdfPath = input.archivosPdf.find(path => path.endsWith(filename));
         if (!pdfPath) {
             return res.status(404).json({ error: 'Archivo no encontrado' });
         }
 
-        // Servir el archivo
+        // 1. Construir la ruta completa (usando una ruta base)
+        const fullPdfPath = path.join(pdfPath);
+
+        // 2. Verificar si el archivo existe ANTES de crear el stream
+        const fs = require('fs'); // Importa el módulo fs
+        if (!fs.existsSync(fullPdfPath)) {
+            console.error('Archivo no encontrado:', fullPdfPath);
+            return res.status(404).json({ error: 'Archivo no encontrado' });
+        }
+
+        // 3. Manejo de errores en el stream
         res.setHeader('Content-Type', 'application/pdf');
-        fs.createReadStream(pdfPath).pipe(res);
+        fs.createReadStream(fullPdfPath)
+            .on('error', (err) => {
+                if (err.code === 'ENOENT') {
+                    console.error('Archivo no encontrado:', fullPdfPath);
+                    return res.status(404).json({ error: 'Archivo no encontrado' });
+                }
+                console.error('Error al leer el archivo PDF:', err);
+                res.status(500).json({ error: 'Error interno del servidor' });
+            })
+            .pipe(res); // El pipe va DESPUÉS del manejo de errores
+
     } catch (error) {
         console.error('Error al servir el archivo PDF:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -74,9 +92,28 @@ exports.getPdfByIdSeguimiento = async (req, res) => {
             return res.status(404).json({ error: 'Archivo no encontrado' });
         }
 
-        // Servir el archivo
+        // 1. Construir la ruta completa (usando una ruta base)
+        const fullPdfPath = path.join(pdfPath);
+
+        // 2. Verificar si el archivo existe ANTES de crear el stream
+        const fs = require('fs'); // Importa el módulo fs
+        if (!fs.existsSync(fullPdfPath)) {
+            console.error('Archivo no encontrado:', fullPdfPath);
+            return res.status(404).json({ error: 'Archivo no encontrado' });
+        }
+
+        // 3. Manejo de errores en el stream
         res.setHeader('Content-Type', 'application/pdf');
-        fs.createReadStream(pdfPath).pipe(res);
+        fs.createReadStream(fullPdfPath)
+            .on('error', (err) => {
+                if (err.code === 'ENOENT') {
+                    console.error('Archivo no encontrado:', fullPdfPath);
+                    return res.status(404).json({ error: 'Archivo no encontrado' });
+                }
+                console.error('Error al leer el archivo PDF:', err);
+                res.status(500).json({ error: 'Error interno del servidor' });
+            })
+            .pipe(res); // El pipe va DESPUÉS del manejo de errores
     } catch (error) {
         console.error('Error al servir el archivo PDF:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
