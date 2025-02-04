@@ -120,8 +120,8 @@ exports.getPdfByIdSeguimiento = async (req, res) => {
     }
 };
 
-//Traer todos los registros con privilegios de enlace, informacion por area 08/01/2025 (FUNCIONANDO Y TERMINADO)
-exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
+//Traer todos los registros con privilegios de enlace, informacion por area 31/01/2025 (FUNCIONANDO Y TERMINADO)
+exports.getNoDeletedInputsInCurrentYearByNormalUsers = async (req, res) => {
     let areaUsuario;
 
     // Determinar cómo se proporciona el área (prioridad: query > params > body)
@@ -139,7 +139,9 @@ exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
     }
 
     try {
-        const query = { deleted: false, asignado: areaUsuario };
+        const currentYear = new Date().getFullYear();
+
+        const query = { deleted: false, asignado: areaUsuario, anio: currentYear };
 
         const totalInputs = await Input.countDocuments(query); // Contar documentos con el filtro
 
@@ -180,10 +182,128 @@ exports.getNoDeletedInputsByNormalUsers = async (req, res) => {
     }
 };
 
-//Traer todos los registros con todos los privilegios posibles 07/01/2025 (FUNCIONANDO Y TERMINADO)
-exports.getNoDeletedInputs = async (req, res) => {
+//Traer todos los registros del año anterior para atras con privilegios de enlace, informacion por area 31/01/2025 (FUNCIONANDO Y TERMINADO)
+exports.getNoDeletedInputsInPreviusYearByNormalUsers = async (req, res) => {
+    let areaUsuario;
+
+    // Determinar cómo se proporciona el área (prioridad: query > params > body)
+    if (req.query.area) {
+        areaUsuario = req.query.area;
+    } else if (req.params.area) {
+        areaUsuario = req.params.area;
+    } else if (req.body.area) {
+        areaUsuario = req.body.area;
+    } else {
+        return res.status(400).json({
+            status: 'error',
+            message: 'El parámetro "area" es requerido (query, params o body).',
+        });
+    }
+
     try {
-        const query = { deleted: false };
+        const currentYear = new Date().getFullYear();
+
+        const query = { deleted: false, asignado: areaUsuario, anio: { $lte: currentYear -1 } };
+
+        const totalInputs = await Input.countDocuments(query); // Contar documentos con el filtro
+
+        const projection = {
+            anio: 1,
+            folio: 1,
+            num_oficio: 1,
+            fecha_recepcion: 1,
+            asignado: 1,
+            asunto: 1,
+            estatus: 1,
+            _id: 1,
+            'seguimientos.atencion_otorgada': 1,
+        };
+
+        const inputs = await Input.find(query, projection)
+            .sort({ anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 })
+            // .allowDiskUse(true)
+            // .skip(skip)
+            // .limit(limit)
+            .lean();
+
+        if (inputs.length === 0) {
+            return res.status(204).json();
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            inputs: inputs,
+            totalInputs: totalInputs,
+        });
+    } catch (error) {
+        console.error("Error en getNoDeletedInputsByNormalUsers:", error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Error al devolver el registro.',
+        });
+    }
+};
+
+//Traer todos los registros del año en curso con todos los privilegios posibles 31/01/2025 (FUNCIONANDO Y TERMINADO)
+exports.getNoDeletedInputsInCurrentYear = async (req, res) => {
+    try {
+        const currentYear = new Date().getFullYear();
+
+        let query = { deleted: false, anio: currentYear };
+
+        if (req.query.year) {
+            query.anio = parseInt(req.query.year);
+        }
+
+        const projection = {
+            anio: 1,
+            folio: 1,
+            num_oficio: 1,
+            fecha_recepcion: 1,
+            asignado: 1,
+            asunto: 1,
+            estatus: 1,
+            _id: 1,
+            'seguimientos.atencion_otorgada': 1,
+        };
+        // console.log(projection);
+        const totalInputs = await Input.countDocuments(query);
+        
+        const inputs = await Input.find(query, projection)
+            .sort({ anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 })
+            .lean();
+
+        if (inputs.length === 0) {
+            return res.status(204).json({
+            status: 'error',
+            message: 'No existen registros!',
+            });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            inputs: inputs,
+            totalInputs: totalInputs,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Error al devolver el registro.',
+        });
+    }
+},
+
+//Traer todos los registros del año anterior para atras con todos los privilegios posibles 31/01/2025 (FUNCIONANDO Y TERMINADO)
+exports.getNoDeletedInputsInPreviusYear = async (req, res) => {
+    try {
+        const currentYear = new Date().getFullYear();
+
+        let query = { deleted: false, anio: { $lte: currentYear -1 } };
+
+        if (req.query.year) {
+            query.anio = parseInt(req.query.year);
+        }
 
         const projection = {
             anio: 1,

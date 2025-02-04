@@ -11,8 +11,9 @@ const app = express();
 // Configuración de CORS simplificada
 const corsOptions = {
     origin: "*", // O una lista de orígenes específicos para mayor seguridad
-    methods: "GET, POST, OPTIONS, PUT, DELETE",
-    allowedHeaders: "Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept"
+    methods: "GET, POST, OPTIONS, PUT, DELETE, PATCH",
+    allowedHeaders: "Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept",
+    credentials: true 
 };
 
 app.use(cors(corsOptions));
@@ -57,7 +58,7 @@ require("./routes/institution.routes")(app);
 require("./routes/instrument.routes")(app);
 
 // Iniciar el servidor DESPUÉS de conectar a la base de datos
-const PORT = process.env.PORT || 8082;
+const PORT = process.env.PORT || 8083;
 connectToDatabase().then(() => {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}.`);

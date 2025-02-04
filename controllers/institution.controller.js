@@ -17,59 +17,60 @@ exports.getAllNoDeletedInstitution = async (req, res) => {
 
 exports.saveInstitution = async (req, res) => {
     try {
-        if (!req.body.institution) {
-            return res.status(400).json({ status: 'error', message: 'El nombre del área es requerido' });
-        }
-
-        const institucionExistente = await Institution.findOne({ institution: req.body.institution });
-        if (institucionExistente) {
-            return res.status(400).json({ status: 'error', message: 'Ya existe un área con ese nombre' });
-        }
-
-        const nuevaInstitucion = new Institution({ institution: req.body.institution });
-        const institucionGuardada = await nuevaInstitucion.save();
-
-        res.status(201).json({ status: 'success', message: 'Área creada con éxito', institution: institucionGuardada });
+      if (!req.body.name) {
+        return res.status(400).json({ status: 'error', message: 'El nombre de la institucion es requerido' });
+      }
+  
+      const newInstitution = new Institution({
+        name: req.body.name.toUpperCase(), // Convertir a mayúsculas
+        deleted: false 
+      });
+  
+      const savedInstitution = await newInstitution.save();
+  
+      res.status(201).json({ status: 'success', message: 'Institucion creado con éxito', instrument: savedInstitution });
+  
     } catch (error) {
-        if (error.name === 'ValidationError') {
-            const erroresValidacion = Object.values(error.errors).map(val => val.message);
-            return res.status(400).json({ status: 'error', message: erroresValidacion });
-        }
-        console.error("Error guardando el área:", error);
-        res.status(500).json({ status: 'error', message: 'Error al guardar el área' });
+      if (error.code === 11000) { // Manejar error de duplicidad (índice único)
+        return res.status(400).json({ status: 'error', message: 'Ya existe un institucion con ese nombre' });
+      }
+  
+      console.error("Error guardando el institucion:", error);
+      res.status(500).json({ status: 'error', message: 'Error al guardar el institucion' });
     }
-};
+  };
 
 exports.updateInstitution = async (req, res) => {
     try {
-      const id = req.params.id;
-
-      if (!isValidObjectId(id)) {
-          return res.status(400).json({ status: 'error', message: 'ID de área no válido' });
-      }
-
-        if (!req.body.institution) {
-            return res.status(400).json({ status: 'error', message: 'El nombre del área es requerido' });
+        const { id } = req.params; 
+        const { name } = req.body;
+    
+        const institution = await Institution.findByIdAndUpdate(id, { name }, { new: true }); 
+    
+        if (!institution) {
+          return res.status(404).json({ status: 'error', message: 'Institucion no encontrado' });
         }
-
-        const institucionExistente = await Institution.findOne({ institution: req.body.institution, _id: { $ne: id } });
-        if (institucionExistente) {
-            return res.status(400).json({ status: 'error', message: 'Ya existe un área con ese nombre' });
-        }
-
-        const institucionActualiada = await Institution.findByIdAndUpdate(id, { institution: req.body.institution }, { new: true, runValidators: true });
-
-        if (!institucionActualiada) {
-            return res.status(404).json({ status: 'error', message: 'Área no encontrada' });
-        }
-
-        res.status(200).json({ status: 'success', message: 'Área actualizada con éxito', institution: institucionActualiada });
+    
+        res.status(200).json({ status: 'success', message: 'Institucion actualizado con éxito', institution });
     } catch (error) {
-        if (error.name === 'ValidationError') {
-            const erroresValidacion = Object.values(error.errors).map(val => val.message);
-            return res.status(400).json({ status: 'error', message: erroresValidacion });
-        }
-        console.error("Error actualizando el área:", error);
-        res.status(500).json({ status: 'error', message: 'Error al actualizar el área' });
+        console.error("Error actualizando la institucion:", error);
+        res.status(500).json({ status: 'error', message: 'Error al actualizar la institucion' });
+    }
+};
+
+exports.getInstitutionById = async (req, res) => {
+    try {
+      const { id } = req.params; 
+  
+      const institution = await Institution.findById(id);
+  
+      if (!institution) {
+        return res.status(404).json({ status: 'error', message: 'Institucion no encontrado' });
+      }
+  
+      res.status(200).json({ status: 'success', institution });
+    } catch (error) {
+      console.error("Error obteniendo el institucion:", error);
+      res.status(500).json({ status: 'error', message: 'Error al obtener el institucion' });
     }
 };

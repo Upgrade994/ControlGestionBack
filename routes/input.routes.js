@@ -10,8 +10,12 @@ module.exports = function(app){
         next();
     });
 
-    app.get("/api/inputs/:search?", inputController.getNoDeletedInputs);
-    app.get("/api/inputs_area/:area?", inputController.getNoDeletedInputsByNormalUsers);
+    app.get("/api/inputs", inputController.getNoDeletedInputsInCurrentYear); 
+    app.get("/api/inputs_previous", inputController.getNoDeletedInputsInPreviusYear);
+
+    app.get("/api/inputs_area/:area?", inputController.getNoDeletedInputsInCurrentYearByNormalUsers); 
+    app.get("/api/inputs_area_previous/:area?", inputController.getNoDeletedInputsInPreviusYearByNormalUsers);
+
     app.post("/api/create_inputs", inputController.createInput);
     app.get("/api/inputById/:id", inputController.getInputById);
     app.patch("/api/updateInputById/:id", inputController.updateInputById);
