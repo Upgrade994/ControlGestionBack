@@ -45,7 +45,7 @@ exports.updateInstitution = async (req, res) => {
         const { id } = req.params; 
         const { name } = req.body;
     
-        const institution = await Institution.findByIdAndUpdate(id, { name }, { new: true }); 
+        const institution = await Institution.findByIdAndUpdate(id, { name }, { new: true }).lean().exec(); 
     
         if (!institution) {
           return res.status(404).json({ status: 'error', message: 'Institucion no encontrado' });
@@ -62,7 +62,7 @@ exports.getInstitutionById = async (req, res) => {
     try {
       const { id } = req.params; 
   
-      const institution = await Institution.findById(id);
+      const institution = await Institution.findById(id).lean().exec();
   
       if (!institution) {
         return res.status(404).json({ status: 'error', message: 'Institucion no encontrado' });

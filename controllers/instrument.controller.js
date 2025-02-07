@@ -14,7 +14,7 @@ exports.getInstrumentById = async (req, res) => {
     try {
       const { id } = req.params; 
   
-      const instrument = await Instrument.findById(id);
+      const instrument = await Instrument.findById(id).lean().exec();
   
       if (!instrument) {
         return res.status(404).json({ status: 'error', message: 'Instrumento no encontrado' });
@@ -57,7 +57,7 @@ exports.updateInstrument = async (req, res) => {
       const { id } = req.params; 
       const { name } = req.body;
   
-      const instrument = await Instrument.findByIdAndUpdate(id, { name }, { new: true }); 
+      const instrument = await Instrument.findByIdAndUpdate(id, { name }, { new: true }).lean().exec(); 
   
       if (!instrument) {
         return res.status(404).json({ status: 'error', message: 'Instrumento no encontrado' });

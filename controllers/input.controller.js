@@ -6,6 +6,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { ObjectId } = require('mongodb');
+const ExcelJS = require('exceljs');
+const ExcelFullData = require('../services/ExcelFullData.js');
 
 exports.getPdfsByIdInput = async (req, res) => {
     try {
@@ -550,34 +552,41 @@ exports.updateInputById = async (req, res) => {
 
 // NO TOCAR LAS ULTIMAS 4 FUNCIONES
 exports.getAreasPerDay = async (req, res) => {
-    const searchDay = req.params.search;
+    try {
+    const searchDate = new Date(req.params.search);
 
-    await Input.aggregate([ 
-        { $match: { fecha_recepcion: { $regex: searchDay, $options: "i" }}},
-        { $group: {
+    const inputs = await Input.aggregate([
+        { $match: { fecha_recepcion:  searchDate } },
+        {
+          $group: {
             _id: '$asignado',
-            cantidad: {$sum: 1},
+            cantidad: { $sum: 1 },
             asunto: { $push: '$asunto' }
-        }} 
-    ]).exec((err, inputs) => {
-        if (err) {
-            return res.status(500).send({
-                status: 'error',
-                message: 'Error al buscar'
-            });
+          }
         }
-        if (!inputs || inputs.length <= 0 || inputs == null) {
-            return res.status(404).send({
-                status: 'error',
-                message: 'No hay relaciones con tu busqueda'
-            });
-        }
-        return res.status(200).send({
-            status: 'success',
-            inputs
+      ]);
+  
+      if (inputs.length === 0) {
+        return res.status(404).json({ 
+          status: 'not_found', 
+          message: 'No se encontraron registros para la fecha de recepción.' 
         });
-    });
-},
+      }
+  
+      return res.status(200).json({ 
+        status: 'success', 
+        data: inputs 
+      });
+  
+    } catch (error) {
+      console.error('Error al buscar registros:', error);
+      return res.status(500).json({ 
+        status: 'error', 
+        message: 'Error al procesar la solicitud.' 
+      });
+    }
+};
+  
 
 exports.getEstatusPerArea = async (req, res) => {
     // const fechaInicio = req.params.fechaInicio;
@@ -630,33 +639,40 @@ exports.getEstatusPerArea = async (req, res) => {
 }
 
 exports.reporteResumen = async (req, res) => {
-    const searchInput = req.params.search;
+    try {
+      const searchDate = new Date(req.params.search); 
 
-    //El match por alguna razon no funcionaba con fechas anteriores de 2023
-    const aggregationResult = await Input.aggregate([
-        { $match: { fecha_recepcion: { $regex: searchInput, $options: "i" }}},
-        { $group: {
+      const aggregationResult = await Input.aggregate([
+        { $match: { fecha_recepcion: searchDate } },
+        {
+          $group: {
             _id: '$asignado',
-            cantidad: {$sum: 1},
+            cantidad: { $sum: 1 },
             asunto: { $push: '$asunto' }
-        }} 
-    ]);
-
-    const workbook = ExcelResumeReport(aggregationResult);
-
+          }
+        }
+      ]);
+  
+      const workbook = ExcelResumeReport(aggregationResult);
+  
       res.setHeader(
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       );
-
+  
       res.setHeader(
         "Content-Disposition",
         "attachment; filename=" + "data.xlsx"
-      ); 
-      await workbook.xlsx.write(res)
+      );
+  
+      await workbook.xlsx.write(res);
       return res.status(200).end();
-    //   return res.status(200).json(aggregationResult)
-}
+  
+    } catch (error) {
+      console.error('Error al generar el reporte:', error);
+      res.status(500).json({ error: 'Error al generar el reporte' });
+    }
+};
 
 exports.reporteDiario = async (req, res) => {
     let searchDay = req.params.search;
@@ -730,4 +746,181 @@ exports.reporteDiario = async (req, res) => {
     // await workbook.xlsx.write(res)
 
     // return res.status(200).end();
-}
+};
+
+//Traer todos los registros con privilegios de enlace, informacion por area año actual
+exports.exportarDatosExcelByNormalUsersCurrentYear = async (req, res) => {
+    let areaUsuario;
+
+    // Determinar cómo se proporciona el área (prioridad: query > params > body)
+    if (req.query.area) {
+        areaUsuario = req.query.area;
+    } else if (req.params.area) {
+        areaUsuario = req.params.area;
+    } else if (req.body.area) {
+        areaUsuario = req.body.area;
+    } else {
+        return res.status(400).json({
+            status: 'error',
+            message: 'El parámetro "area" es requerido (query, params o body).',
+        });
+    }
+
+    try {
+        const currentYear = new Date().getFullYear();
+        const query = { deleted: false, asignado: areaUsuario, anio: currentYear };
+        const inputs = await Input.find(query).sort({ 
+            anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
+        }).lean();
+
+        const workbook = await ExcelFullData.generateExcel(inputs);
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="reporte_completo.xlsx"');
+        await workbook.xlsx.write(res);
+        return res.status(200).end();
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error al exportar los datos');
+    }
+};
+
+//Traer todos los registros con todos los privilegios año actual
+exports.exportarDatosExcelAllCurrentYear = async (req, res) => {
+    try {
+        const currentYear = new Date().getFullYear();
+        const query = { deleted: false, anio: currentYear };
+
+        console.log(await Input.countDocuments(query));
+
+        const inputs = await Input.find(query).sort({ 
+            anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
+        }).lean();
+
+        const workbook = await ExcelFullData.generateExcel(inputs);
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="reporte_completo.xlsx"');
+        await workbook.xlsx.write(res);
+        return res.status(200).end();
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error al exportar los datos');
+    }
+};
+
+// AÑOS ANTERIORES
+//Traer todos los registros con privilegios de enlace, informacion por area años anteriores
+exports.exportarDatosExcelByNormalUsersPreviousYear = async (req, res) => {
+    let areaUsuario;
+
+    // Determinar cómo se proporciona el área (prioridad: query > params > body)
+    if (req.query.area) {
+        areaUsuario = req.query.area;
+    } else if (req.params.area) {
+        areaUsuario = req.params.area;
+    } else if (req.body.area) {
+        areaUsuario = req.body.area;
+    } else {
+        return res.status(400).json({
+            status: 'error',
+            message: 'El parámetro "area" es requerido (query, params o body).',
+        });
+    }
+
+    try {
+        const currentYear = new Date().getFullYear();
+        const query = { deleted: false, asignado: areaUsuario, anio: { $lte: currentYear -1 } };
+        const inputs = await Input.find(query).sort({ 
+            anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
+        }).lean();
+
+        const workbook = await ExcelFullData.generateExcel(inputs);
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="reporte_completo.xlsx"');
+        await workbook.xlsx.write(res);
+        return res.status(200).end();
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error al exportar los datos');
+    }
+};
+
+//Traer todos los registros con todos los privilegios años anteriores
+exports.exportarDatosExcelAllPreviousYear = async (req, res) => {
+    try {
+        const currentYear = new Date().getFullYear();
+        const query = { deleted: false, anio: { $lte: currentYear -1 } };
+
+        console.log(await Input.countDocuments(query));
+
+        const inputs = await Input.find(query).sort({ 
+            anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
+        }).lean();
+
+        const workbook = await ExcelFullData.generateExcel(inputs);
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="reporte_completo.xlsx"');
+        await workbook.xlsx.write(res);
+        return res.status(200).end();
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error al exportar los datos');
+    }
+};
+
+exports.generarReporteDiario = async (req, res) => {
+    try {
+        const { fechaInicio, fechaFin } = req.query;
+        console.log(fechaInicio, fechaFin);
+        // Validación de fechas
+        const startDate = new Date(fechaInicio);
+        if (isNaN(startDate.getTime())) {
+            return res.status(400).json({ error: 'La fecha de inicio no es válida' });
+        }
+        const endDate = fechaFin ? new Date(fechaFin) : null;
+        if (endDate && isNaN(endDate.getTime())) {
+            return res.status(400).json({ error: 'La fecha de fin no es válida' });
+        }
+
+        // Construir la consulta
+        let query = { deleted: false };
+        if (endDate) {
+            // Rango de fechas
+            query.fecha_recepcion = { $gte: startDate, $lte: endDate };
+        } else {
+            // Fecha única
+            query.fecha_recepcion = {
+                $gte: startDate,
+                $lt: new Date(startDate.getTime() + 24 * 60 * 60 * 1000)
+            };
+        }
+
+        // Ejecutar la consulta y mostrar los resultados por consola
+        const offices = await Input.find(query).sort({ 
+            anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
+        }).lean();
+        // console.log(`Se encontraron ${offices.length} folios`);
+
+        const workbook = ExcelReport(offices);
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="reporte_completo.xlsx"');
+        await workbook.xlsx.write(res);
+        return res.status(200).end();
+
+        // return res.json({ message: 'Reporte generado exitosamente', data: offices });
+    } catch (error) {
+        // Manejo de errores más específico
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ error: 'Error de validación en el modelo' });
+        } else if (error.name === 'CastError') {
+            return res.status(400).json({ error: 'Formato de fecha inválido' });
+        } else {
+            console.error(error);
+            return res.status(500).json({ error: 'Error interno del servidor' });
+        }
+    }
+};

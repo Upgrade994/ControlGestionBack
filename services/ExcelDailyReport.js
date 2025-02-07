@@ -57,17 +57,17 @@ const exportData = (data) => {
     ]
 
     //Optimizacion de codigo y la fecha tornaba un dia anterior, asi que sume uno
-    var fechaRecepcion = new Date(data[0].fecha_recepcion);
-    if (data[0].fecha_recepcion.includes("T")) {
-        // Dividir la cadena si contiene una "T" y tomar solo la parte de la fecha
-        fechaRecepcion = new Date(data[0].fecha_recepcion.split("T")[0]);
-    }
-    fechaRecepcion.setDate(fechaRecepcion.getDate() + 1);
-    
+    // var fechaRecepcion = new Date(data[0].fecha_recepcion);
+    // if (data[0].fecha_recepcion.includes("T")) {
+    //     // Dividir la cadena si contiene una "T" y tomar solo la parte de la fecha
+    //     fechaRecepcion = new Date(data[0].fecha_recepcion.split("T")[0]);
+    // }
+    // fechaRecepcion.setDate(fechaRecepcion.getDate() + 1);
+
     ws.mergeCells('A1:L3');
     ws.getCell('A1').value =    'PODER EJECUTIVO DEL ESTADO DE CAMPECHE\n'+
                                 'CONSEJERÍA JURÍDICA\n' +
-                                'CONTROL DE RECEPCIÓN DE DOCUMENTOS DEL ' + fechaRecepcion.toLocaleDateString('es-MX') + '\n' +
+                                'CONTROL DE RECEPCIÓN DE DOCUMENTOS\n' +
                                 'FORMATO PARA TURNAR DOCUMENTOS';
 
     ws.columns.forEach((columna, index) => {
@@ -87,7 +87,7 @@ const exportData = (data) => {
             asunto: item.asunto,
             num_oficio: item.num_oficio,
             fecha_oficio: item.fecha_oficio,
-            fecha_recepcion: item.fecha_recepcion.split("T")[0],
+            fecha_recepcion: item.fecha_recepcion,
             hora_recepcion: item.hora_recepcion,
             remitente: item.remitente,
             institucion_origen: item.institucion_origen,
