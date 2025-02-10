@@ -23,6 +23,11 @@ app.use(bodyParser.json({ limit: '5mb' })); // No es necesario extended: true a 
 app.use(bodyParser.urlencoded({ limit: "5mb", extended: true, parameterLimit: 50000 }));
 app.use(bodyParser.text({ limit: '20mb' }));
 
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ message: 'Internal Server Error' });
+});
+
 // Conexión a la base de datos con reintentos
 async function connectToDatabase() {
     let retries = 5;

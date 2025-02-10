@@ -23,12 +23,14 @@ module.exports = function(app){
     app.get("/api/pdfs/:id/download", inputController.getPdfByIdInput);
     app.get("/api/pdfs_seguimiento/:id/download", inputController.getPdfByIdSeguimiento);
     app.get('/api/inputs_oficio/:id/duplicados', inputController.getDuplicatedOficiosByInputId);
+    app.get('/api/inputs_oficio_enlace/:id/duplicados/:area', inputController.getDuplicatedOficiosByInputIdByNormalUsers);
+
 
     // Considerar borrar las siguientes 4 rutas
     app.get('/api/reporte_diario/:search?', inputController.getAreasPerDay);
     app.get("/api/inputs-by-estatus", inputController.getEstatusPerArea);
-    app.get('/api/reportes/:search?',inputController.reporteDiario); //reporte mensual
-    app.get('/api/reporteresumen/:search?',inputController.reporteResumen); //reporte diario
+    // app.get('/api/reportes/:search?',inputController.reporteDiario); //reporte mensual
+    // app.get('/api/reporteresumen/:search?',inputController.reporteResumen); //reporte diario
 
 
     app.get('/api/exportar-excel-enlace-anio-actual/:area?', inputController.exportarDatosExcelByNormalUsersCurrentYear);

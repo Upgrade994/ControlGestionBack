@@ -442,6 +442,7 @@ exports.getInputById = async (req, res) => {
     }
 };
 
+// Trae todos los registros duplicados con todos los privilegios
 exports.getDuplicatedOficiosByInputId = async (req, res) => {
     try {
         const inputId = req.params.id;
@@ -470,7 +471,17 @@ exports.getDuplicatedOficiosByInputId = async (req, res) => {
                                 _id: 1,
                                 num_oficio: 1,
                                 folio: 1,
-                                asignado: 1
+                                asignado: 1,
+                                fecha_recepcion: 1,
+                                anio: 1
+                            }
+                        },
+                        {
+                            $sort: {
+                                anio: -1,
+                                fecha_recepcion: -1,
+                                folio: -1,
+                                createdAt: -1
                             }
                         }
                     ],
@@ -492,6 +503,115 @@ exports.getDuplicatedOficiosByInputId = async (req, res) => {
                     _id: 0,
                     num_oficio: 1,
                     duplicados: 1
+                }
+            },
+            { // Nueva etapa $sort para ordenar el resultado final
+                $sort: {
+                    "duplicados.anio": -1,
+                    "duplicados.fecha_recepcion": -1,
+                    "duplicados.folio": -1,
+                    "duplicados.createdAt": -1
+                }
+            }
+        ];
+
+        const result = await Input.aggregate(aggregationPipeline);
+
+        // 3. Responder con los resultados
+        res.status(200).json({ status: 'success', duplicados: result });
+
+    } catch (error) {
+        console.error("Error en getDuplicatedOficiosByInputId:", error);
+        res.status(500).json({ status: 'error', message: 'Error al obtener los números de oficio duplicados.' });
+    }
+};
+
+// Trae todos los registros duplicados con todos los privilegios
+exports.getDuplicatedOficiosByInputIdByNormalUsers = async (req, res) => {
+    try {
+        const inputId = req.params.id;
+
+        // 1. Validar que el ID sea un ObjectId válido
+        if (!ObjectId.isValid(inputId)) {
+            return res.status(400).json({ status: 'error', message: 'ID de registro inválido.' });
+        }
+
+        let areaUsuario;
+
+        // Determinar cómo se proporciona el área (prioridad: query > params > body)
+        if (req.query.area) {
+            areaUsuario = req.query.area;
+        } else if (req.params.area) {
+            areaUsuario = req.params.area;
+        } else if (req.body.area) {
+            areaUsuario = req.body.area;
+        } else {
+            return res.status(400).json({
+                status: 'error',
+                message: 'El parámetro "area" es requerido (query, params o body).',
+            });
+        }
+
+        const aggregationPipeline = [
+            {
+                $match: { _id: new ObjectId(inputId), deleted: false, asignado: areaUsuario } // Filtra primero por el inputId
+            },
+            {
+                $lookup: { // Nueva etapa $lookup para traer los documentos originales
+                    from: "inputs", // Nombre de tu colección
+                    let: { num_oficio: "$num_oficio" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$num_oficio", "$$num_oficio"] },
+                                asignado: areaUsuario
+                            }
+                        },
+                        {
+                            $project: { // Proyecta los campos que necesitas
+                                _id: 1,
+                                num_oficio: 1,
+                                folio: 1,
+                                asignado: 1,
+                                fecha_recepcion: 1,
+                                anio: 1
+                            }
+                        },
+                        {
+                            $sort: {
+                                anio: -1,
+                                fecha_recepcion: -1,
+                                folio: -1,
+                                createdAt: -1
+                            }
+                        }
+                    ],
+                    as: "duplicados"
+                }
+            },
+            {
+                $unwind: "$duplicados" // Desenrolla el array de duplicados para que cada documento esté en su propio objeto
+            },
+            {
+                $group: { // Agrupa por num_oficio para mostrar todos los documentos con el mismo num_oficio
+                    _id: "$duplicados.num_oficio",
+                    num_oficio: { $first: "$duplicados.num_oficio" },
+                    duplicados: { $push: "$duplicados" }
+                }
+            },
+            {
+                $project: { // Da formato a la salida
+                    _id: 0,
+                    num_oficio: 1,
+                    duplicados: 1
+                }
+            },
+            { // Nueva etapa $sort para ordenar el resultado final
+                $sort: {
+                    "duplicados.anio": -1,
+                    "duplicados.fecha_recepcion": -1,
+                    "duplicados.folio": -1,
+                    "duplicados.createdAt": -1
                 }
             }
         ];
@@ -550,33 +670,32 @@ exports.updateInputById = async (req, res) => {
     }
 };
 
-// NO TOCAR LAS ULTIMAS 4 FUNCIONES
 exports.getAreasPerDay = async (req, res) => {
     try {
-    const searchDate = new Date(req.params.search);
+        const searchDate = new Date(req.params.search);
 
-    const inputs = await Input.aggregate([
-        { $match: { fecha_recepcion:  searchDate } },
-        {
-          $group: {
-            _id: '$asignado',
-            cantidad: { $sum: 1 },
-            asunto: { $push: '$asunto' }
-          }
+        const inputs = await Input.aggregate([
+            { $match: { fecha_recepcion:  searchDate } },
+            {
+            $group: {
+                _id: '$asignado',
+                cantidad: { $sum: 1 },
+                asunto: { $push: '$asunto' }
+            }
+            }
+        ]);
+    
+        if (inputs.length === 0) {
+            return res.status(404).json({ 
+            status: 'not_found', 
+            message: 'No se encontraron registros para la fecha de recepción.' 
+            });
         }
-      ]);
-  
-      if (inputs.length === 0) {
-        return res.status(404).json({ 
-          status: 'not_found', 
-          message: 'No se encontraron registros para la fecha de recepción.' 
+    
+        return res.status(200).json({ 
+            status: 'success', 
+            data: inputs 
         });
-      }
-  
-      return res.status(200).json({ 
-        status: 'success', 
-        data: inputs 
-      });
   
     } catch (error) {
       console.error('Error al buscar registros:', error);
@@ -638,116 +757,6 @@ exports.getEstatusPerArea = async (req, res) => {
     }
 }
 
-exports.reporteResumen = async (req, res) => {
-    try {
-      const searchDate = new Date(req.params.search); 
-
-      const aggregationResult = await Input.aggregate([
-        { $match: { fecha_recepcion: searchDate } },
-        {
-          $group: {
-            _id: '$asignado',
-            cantidad: { $sum: 1 },
-            asunto: { $push: '$asunto' }
-          }
-        }
-      ]);
-  
-      const workbook = ExcelResumeReport(aggregationResult);
-  
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-  
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=" + "data.xlsx"
-      );
-  
-      await workbook.xlsx.write(res);
-      return res.status(200).end();
-  
-    } catch (error) {
-      console.error('Error al generar el reporte:', error);
-      res.status(500).json({ error: 'Error al generar el reporte' });
-    }
-};
-
-exports.reporteDiario = async (req, res) => {
-    let searchDay = req.params.search;
-    // console.log(searchDay, '449');
-
-    if (searchDay.length === 10) {
-        // console.log(searchDay, 'if');
-        // Consulta exacta por fecha
-        const aggregationResult = await Input.find({
-          fecha_recepcion: { $regex: searchDay, $options: "i" }
-        }, { deleted: false }, { pdfString: 0 });
-    
-        const workbook = ExcelReport(aggregationResult);
-    
-        res.setHeader(
-          "Content-Type",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
-    
-        res.setHeader(
-          "Content-Disposition",
-          "attachment; filename=" + "data.xlsx"
-        );
-    
-        await workbook.xlsx.write(res);
-    
-        return res.status(200).end();
-    } else {
-        // console.log(searchDay, 'else');
-        // Consulta por rango de fechas
-        const [startDate, endDate] = req.params.search.split(' ');
-    
-        const aggregationResult = await Input.find({
-          fecha_recepcion: { $gte: startDate, $lte: endDate }
-        }, { deleted: false }, { pdfString: 0 });
-    
-        const workbook = ExcelReport(aggregationResult);
-    
-        res.setHeader(
-          "Content-Type",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
-    
-        res.setHeader(
-          "Content-Disposition",
-          "attachment; filename=" + "data.xlsx"
-        );
-    
-        await workbook.xlsx.write(res);
-    
-        return res.status(200).end();
-      }
-
-    // Optimizacion de la busqueda
-    // const aggregationResult = await Input.find({
-    //     fecha_recepcion: { $regex: searchDay, $options: "i" }
-    // });
-
-    // const workbook = ExcelReport(aggregationResult);
-    
-    // res.setHeader(
-    //   "Content-Type",
-    //   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    // );
-    
-    // res.setHeader(
-    //   "Content-Disposition",
-    //   "attachment; filename=" + "data.xlsx"
-    // );  
-
-    // await workbook.xlsx.write(res)
-
-    // return res.status(200).end();
-};
-
 //Traer todos los registros con privilegios de enlace, informacion por area año actual
 exports.exportarDatosExcelByNormalUsersCurrentYear = async (req, res) => {
     let areaUsuario;
@@ -790,8 +799,6 @@ exports.exportarDatosExcelAllCurrentYear = async (req, res) => {
     try {
         const currentYear = new Date().getFullYear();
         const query = { deleted: false, anio: currentYear };
-
-        console.log(await Input.countDocuments(query));
 
         const inputs = await Input.find(query).sort({ 
             anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
@@ -853,8 +860,6 @@ exports.exportarDatosExcelAllPreviousYear = async (req, res) => {
         const currentYear = new Date().getFullYear();
         const query = { deleted: false, anio: { $lte: currentYear -1 } };
 
-        console.log(await Input.countDocuments(query));
-
         const inputs = await Input.find(query).sort({ 
             anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
         }).lean();
@@ -874,7 +879,7 @@ exports.exportarDatosExcelAllPreviousYear = async (req, res) => {
 exports.generarReporteDiario = async (req, res) => {
     try {
         const { fechaInicio, fechaFin } = req.query;
-        console.log(fechaInicio, fechaFin);
+
         // Validación de fechas
         const startDate = new Date(fechaInicio);
         if (isNaN(startDate.getTime())) {

@@ -24,11 +24,11 @@ const seguimientoSchema = new Schema({
 const inputSchema = new Schema({
     anio: { type: Number, required: true, index: true },
     folio: { type: Number, required: true },
-    num_oficio: { type: String, uppercase: true }, // Añade unique para evitar duplicados ----- , required: true, unique: true
-    fecha_oficio: { type: Date, required: true }, // Usa tipo Date
-    fecha_vencimiento: { type: Date }, // Usa tipo Date
-    fecha_recepcion: { type: Date, required: true }, // Usa tipo Date
-    hora_recepcion: { type: String }, // Considera usar un tipo Time si MongoDB lo soporta en tu versión.
+    num_oficio: { type: String, uppercase: true },
+    fecha_oficio: { type: Date, required: true },
+    fecha_vencimiento: { type: Date },
+    fecha_recepcion: { type: Date, required: true },
+    hora_recepcion: { type: String },
     instrumento_juridico: { type: String, uppercase: true },
     remitente: { type: String, uppercase: true },
     institucion_origen: { type: String, uppercase: true },

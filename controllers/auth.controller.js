@@ -84,6 +84,13 @@ exports.signin = async (req, res) => {
       expiresIn: 86400 // 24 hours
     });
 
+    res.cookie('token', token, { 
+      httpOnly: true, 
+      // secure: true, // Solo si tienes HTTPS
+      sameSite: 'strict',
+      maxAge: 86400000
+    });
+
     // Extract roles (formatted as authorities)
     const authorities = user.roles.map(role => "ROLE_" + role.name.toUpperCase());
 
