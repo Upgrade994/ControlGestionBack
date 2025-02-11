@@ -705,7 +705,42 @@ exports.getAreasPerDay = async (req, res) => {
       });
     }
 };
+
+exports.reporteResumen = async (req, res) => {
+    try {
+      const searchDate = new Date(req.params.search); 
+
+      const aggregationResult = await Input.aggregate([
+        { $match: { fecha_recepcion: searchDate } },
+        {
+          $group: {
+            _id: '$asignado',
+            cantidad: { $sum: 1 },
+            asunto: { $push: '$asunto' }
+          }
+        }
+      ]);
   
+      const workbook = ExcelResumeReport(aggregationResult);
+  
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+  
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=" + "data.xlsx"
+      );
+  
+      await workbook.xlsx.write(res);
+      return res.status(200).end();
+  
+    } catch (error) {
+      console.error('Error al generar el reporte:', error);
+      res.status(500).json({ error: 'Error al generar el reporte' });
+    }
+};
 
 exports.getEstatusPerArea = async (req, res) => {
     // const fechaInicio = req.params.fechaInicio;
