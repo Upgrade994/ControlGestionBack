@@ -22,7 +22,7 @@ const seguimientoSchema = new Schema({
 }, { timestamps: true });
 
 const inputSchema = new Schema({
-    anio: { type: Number, required: true, index: true },
+    anio: { type: Number, index: true },
     folio: { type: Number, required: true },
     num_oficio: { type: String, uppercase: true },
     fecha_oficio: { type: Date, required: true },

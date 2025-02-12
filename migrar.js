@@ -47,7 +47,7 @@ async function guardarPDF(base64String, registroAntiguo, esSeguimiento = false) 
         const buffer = Buffer.from(base64String, 'base64');
 
         // Obtiene los datos para la ruta
-        const asignado = registroAntiguo.asignado || 'SinAsignar';
+        const asignado = (registroAntiguo.asignado || 'SinAsignar').trim();
         const fechaRecepcion = registroAntiguo.fecha_recepcion ? new Date(registroAntiguo.fecha_recepcion) : null;
         if (!fechaRecepcion) {
             await log(`Error: fecha_recepcion inválida para _id: ${registroAntiguo._id}`);
@@ -56,7 +56,7 @@ async function guardarPDF(base64String, registroAntiguo, esSeguimiento = false) 
         const anio = fechaRecepcion.getFullYear();
         const mes = String(fechaRecepcion.getMonth() + 1).padStart(2, '0');
         const dia = fechaRecepcion.getDate() + 1;
-        const folio = registroAntiguo.folio || 'SinFolio';
+        const folio = (registroAntiguo.folio || 'SinFolio').trim();
 
         // Construye la ruta base
         let rutaBase = path.join('C:', 'Control_Gestion_pdfs', asignado, String(anio), String(mes));
@@ -74,7 +74,7 @@ async function guardarPDF(base64String, registroAntiguo, esSeguimiento = false) 
         let rutaCompleta;
 
         do {
-            const nombreArchivo = `${dia}_${folio}_${String(contador).padStart(3, '0')}.pdf`;
+            const nombreArchivo = `${dia}_${folio}_S${String(contador).padStart(3, '0')}.pdf`;
             rutaCompleta = path.join(rutaBase, nombreArchivo);
 
             // Verifica si el archivo ya existe
@@ -158,14 +158,14 @@ async function migrarDatos() {
                         fecha_oficio: convertirFecha(registroAntiguo.fecha_oficio),
                         fecha_vencimiento: convertirFecha(registroAntiguo.fecha_vencimiento),
                         hora_recepcion: registroAntiguo.hora_recepcion,
-                        instrumento_juridico: registroAntiguo.instrumento_juridico,
-                        remitente: registroAntiguo.remitente,
-                        institucion_origen: registroAntiguo.institucion_origen,
-                        asunto: registroAntiguo.asunto,
-                        asignado: registroAntiguo.asignado,
+                        instrumento_juridico: (registroAntiguo.instrumento_juridico || "").trim(),
+                        remitente: (registroAntiguo.remitente || "").trim(),
+                        institucion_origen: (registroAntiguo.institucion_origen || "").trim(),
+                        asunto: (registroAntiguo.asunto || "").trim(),
+                        asignado: (registroAntiguo.asignado || "").trim(),
                         estatus: estatus,
-                        observacion: registroAntiguo.observacion,
-                        archivosPdf: archivoPdf ? [archivoPdf] : [], // Guarda la ruta
+                        observacion: (registroAntiguo.observacion || "").trim(),
+                        archivosPdf: (archivoPdf ? [archivoPdf] : []).trim(), // Guarda la ruta
                         create_user: transformarUsuario(registroAntiguo.create_user),
                         editor_user: transformarUsuario(registroAntiguo.editor_user),
                         edit_count: registroAntiguo.edit_count || 0,
