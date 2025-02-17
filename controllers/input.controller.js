@@ -160,7 +160,7 @@ exports.getNoDeletedInputsInCurrentYearByNormalUsers = async (req, res) => {
         };
 
         const inputs = await Input.find(query, projection)
-            .sort({ anio: -1, fecha_recepcion: -1, folio: -1, createdAt: -1 })
+            .sort({ anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 })
             // .allowDiskUse(true)
             // .skip(skip)
             // .limit(limit)
@@ -222,7 +222,7 @@ exports.getNoDeletedInputsInPreviusYearByNormalUsers = async (req, res) => {
         };
 
         const inputs = await Input.find(query, projection)
-            .sort({ anio: -1, fecha_recepcion: -1, folio: -1, createdAt: -1 })
+            .sort({ anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 })
             // .allowDiskUse(true)
             // .skip(skip)
             // .limit(limit)
@@ -272,7 +272,7 @@ exports.getNoDeletedInputsInCurrentYear = async (req, res) => {
         const totalInputs = await Input.countDocuments(query);
         
         const inputs = await Input.find(query, projection)
-            .sort({ anio: -1, fecha_recepcion: -1, folio: -1, createdAt: -1 })
+            .sort({ anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 })
             .lean();
 
         if (inputs.length === 0) {
@@ -322,7 +322,7 @@ exports.getNoDeletedInputsInPreviusYear = async (req, res) => {
         const totalInputs = await Input.countDocuments(query);
         
         const inputs = await Input.find(query, projection)
-            .sort({ anio: -1, fecha_recepcion: -1, folio: -1, createdAt: -1 })
+            .sort({ anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 })
             .lean();
 
         if (inputs.length === 0) {
@@ -405,6 +405,13 @@ exports.createInput = async (req, res) => {
             return res.status(400).json({ status: 'error', message: errors });
         }
 
+        if (error.code === 11000 && error.keyPattern && error.keyPattern.folio === 1) { // Verifica si el error es por folio duplicado
+            return res.status(400).json({ 
+                status: 'error', 
+                message: 'Ya existe un registro con ese folio. Por favor, ingrese un folio diferente.' 
+            });
+        }
+
         if (error.code === 11000 && error.keyPattern && error.keyPattern.num_oficio) {
             return res.status(400).json({ status: 'error', message: 'El número de oficio ya existe.' });
         }
@@ -413,6 +420,41 @@ exports.createInput = async (req, res) => {
             status: 'error',
             message: 'Error al crear el registro.',
         });
+    }
+};
+
+exports.existeFolio = async (req, res) => {
+    try {
+      const anio = parseInt(req.params.anio);
+      const folio = parseInt(req.params.folio);
+  
+      const registro = await Input.findOne({ anio, folio });
+      res.json(!!registro); // Devuelve true si existe, false si no
+    } catch (error) {
+      console.error("Error al verificar folio:", error);
+      res.status(500).json({ message: 'Error al verificar folio.' });
+    }
+};
+
+exports.getUltimoFolio = async (req, res) => {
+    try {
+        const anio = parseInt(req.params.anio); // Convierte a número el año
+
+        if (isNaN(anio)) {
+            return res.status(400).json({ message: 'Año inválido.' });
+        }
+
+        const ultimoRegistro = await Input.findOne({ anio }, { folio: 1 }, { sort: { folio: -1 } });
+        
+        if (!ultimoRegistro) {
+            return res.json(0); // Si no hay registros, devuelve 0
+        }
+
+        res.json(ultimoRegistro.folio);
+
+    } catch (error) {
+        console.error("Error al obtener el último folio:", error);
+        res.status(500).json({ message: 'Error al obtener el último folio.' });
     }
 };
 

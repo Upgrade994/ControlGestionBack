@@ -17,6 +17,7 @@ const uri = 'mongodb://127.0.0.1:27017/ControlGestion';
 const pdfFolderPath = path.join(__dirname, 'pdfs');
 const logFile = 'migracion.log';
 const BATCH_SIZE = 100;
+const CAMPECHE_TIMEZONE_OFFSET = 18;
 
 // Crea la carpeta de PDFs y limpia el archivo de log (usando async/await)
 async function inicializar() {
@@ -47,7 +48,7 @@ async function guardarPDF(base64String, registroAntiguo, esSeguimiento = false) 
         const buffer = Buffer.from(base64String, 'base64');
 
         // Obtiene los datos para la ruta
-        const asignado = (registroAntiguo.asignado || 'SinAsignar').trim();
+        const asignado = registroAntiguo.asignado || 'SinAsignar';
         const fechaRecepcion = registroAntiguo.fecha_recepcion ? new Date(registroAntiguo.fecha_recepcion) : null;
         if (!fechaRecepcion) {
             await log(`Error: fecha_recepcion inválida para _id: ${registroAntiguo._id}`);
@@ -56,7 +57,7 @@ async function guardarPDF(base64String, registroAntiguo, esSeguimiento = false) 
         const anio = fechaRecepcion.getFullYear();
         const mes = String(fechaRecepcion.getMonth() + 1).padStart(2, '0');
         const dia = fechaRecepcion.getDate() + 1;
-        const folio = (registroAntiguo.folio || 'SinFolio').trim();
+        const folio = registroAntiguo.folio || 'SinFolio';
 
         // Construye la ruta base
         let rutaBase = path.join('C:', 'Control_Gestion_pdfs', asignado, String(anio), String(mes));
@@ -74,7 +75,7 @@ async function guardarPDF(base64String, registroAntiguo, esSeguimiento = false) 
         let rutaCompleta;
 
         do {
-            const nombreArchivo = `${dia}_${folio}_S${String(contador).padStart(3, '0')}.pdf`;
+            const nombreArchivo = `${dia}_${folio}_${String(contador).padStart(3, '0')}.pdf`;
             rutaCompleta = path.join(rutaBase, nombreArchivo);
 
             // Verifica si el archivo ya existe
@@ -94,6 +95,15 @@ async function guardarPDF(base64String, registroAntiguo, esSeguimiento = false) 
         await log(`Error al guardar PDF para _id: ${registroAntiguo._id}: ${error}`);
         return null;
     }
+}
+
+function convertirFecha(fechaStr) {
+    if (!fechaStr) return null;
+
+    const fechaUTC = new Date(fechaStr);
+    const fechaCampeche = new Date(fechaUTC.getTime() + CAMPECHE_TIMEZONE_OFFSET * 60 * 60 * 1000);
+
+    return fechaCampeche;
 }
 
 async function migrarDatos() {
@@ -151,21 +161,21 @@ async function migrarDatos() {
 
                     const nuevoRegistro = {
                         _id: registroAntiguo._id,
-                        anio: registroAntiguo.anio || (fechaRecepcion && fechaRecepcion.getFullYear()),
+                        anio: fechaRecepcion ? fechaRecepcion.getFullYear() : null,
                         folio: registroAntiguo.folio,
                         num_oficio: registroAntiguo.num_oficio,
                         fecha_recepcion: convertirFecha(registroAntiguo.fecha_recepcion),
                         fecha_oficio: convertirFecha(registroAntiguo.fecha_oficio),
                         fecha_vencimiento: convertirFecha(registroAntiguo.fecha_vencimiento),
                         hora_recepcion: registroAntiguo.hora_recepcion,
-                        instrumento_juridico: (registroAntiguo.instrumento_juridico || "").trim(),
-                        remitente: (registroAntiguo.remitente || "").trim(),
-                        institucion_origen: (registroAntiguo.institucion_origen || "").trim(),
-                        asunto: (registroAntiguo.asunto || "").trim(),
-                        asignado: (registroAntiguo.asignado || "").trim(),
+                        instrumento_juridico: registroAntiguo.instrumento_juridico,
+                        remitente: registroAntiguo.remitente,
+                        institucion_origen: registroAntiguo.institucion_origen,
+                        asunto: registroAntiguo.asunto,
+                        asignado: registroAntiguo.asignado,
                         estatus: estatus,
-                        observacion: (registroAntiguo.observacion || "").trim(),
-                        archivosPdf: (archivoPdf ? [archivoPdf] : []).trim(), // Guarda la ruta
+                        observacion: registroAntiguo.observacion,
+                        archivosPdf: archivoPdf ? [archivoPdf] : [], // Guarda la ruta
                         create_user: transformarUsuario(registroAntiguo.create_user),
                         editor_user: transformarUsuario(registroAntiguo.editor_user),
                         edit_count: registroAntiguo.edit_count || 0,
@@ -205,12 +215,6 @@ async function migrarDatos() {
 
 // Funciones de utilidad (fuera del bucle principal para mejor legibilidad)
 
-function convertirFecha(fechaStr) {
-    if (!fechaStr) return null;
-    const fecha = new Date(fechaStr);
-    return isNaN(fecha) ? null : fecha;
-}
-
 function transformarUsuario(usuarioAntiguo) {
     if (!usuarioAntiguo) return null;
     return {
@@ -225,7 +229,6 @@ function transformarSeguimiento(registroAntiguo, archivoSegPdf) {
     // if (!registroAntiguo.seg_oficio_salida) return null;
     return {
         oficio_salida: registroAntiguo.seg_oficio_salida || "",
-        fecha: convertirFecha(registroAntiguo.seg_fecha_oficio_salida),
         fecha_oficio_salida: convertirFecha(registroAntiguo.seg_fecha_oficio_salida),
         fecha_acuse_recibido: convertirFecha(registroAntiguo.seg_fecha_acuse_recibido),
         usuario: transformarUsuario(registroAntiguo.seg_editor_user_exit),

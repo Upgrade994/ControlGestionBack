@@ -23,7 +23,7 @@ const seguimientoSchema = new Schema({
 
 const inputSchema = new Schema({
     anio: { type: Number, index: true },
-    folio: { type: Number, required: true },
+    folio: { type: Number, required: true, unique: true },
     num_oficio: { type: String, uppercase: true },
     fecha_oficio: { type: Date, required: true },
     fecha_vencimiento: { type: Date },
@@ -55,5 +55,6 @@ inputSchema.index({ anio: -1, createdAt: -1 });
 inputSchema.index({ deleted: 1, anio: -1, createdAt: -1 });
 inputSchema.index({ num_oficio: 1 });
 inputSchema.index({ num_oficio: 1, deleted: 1 });
+inputSchema.index({ anio: 1, folio: 1 }, { unique: true });
 
 module.exports = mongoose.model('InputsNuevo', inputSchema);

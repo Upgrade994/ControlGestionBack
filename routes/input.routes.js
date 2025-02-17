@@ -25,7 +25,9 @@ module.exports = function(app){
     app.get('/api/inputs_oficio/:id/duplicados', inputController.getDuplicatedOficiosByInputId);
     app.get('/api/inputs_oficio_enlace/:id/duplicados/:area', inputController.getDuplicatedOficiosByInputIdByNormalUsers);
 
-
+    app.get('/api/inputs/ultimo-folio/:anio', inputController.getUltimoFolio);
+    app.get('/api/inputs/existe-folio/:anio/:folio', inputController.existeFolio);
+    
     // Considerar borrar las siguientes 4 rutas
     app.get('/api/reporte_diario/:search?', inputController.getAreasPerDay);
     app.get("/api/inputs-by-estatus", inputController.getEstatusPerArea);
