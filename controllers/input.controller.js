@@ -34,47 +34,55 @@ exports.getPdfsByIdInput = async (req, res) => {
 };
 
 exports.getPdfByIdInput = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { filename } = req.query;
+  try {
+      const { id } = req.params;
+      const { filename } = req.query;
 
-        const input = await Input.findById(id);
-        if (!input) {
-            return res.status(404).json({ error: 'Registro no encontrado' });
-        }
+      const input = await Input.findById(id);
+      if (!input) {
+          return res.status(404).json({ error: 'Registro no encontrado' });
+      }
 
-        const pdfPath = input.archivosPdf.find(path => path.endsWith(filename));
-        if (!pdfPath) {
-            return res.status(404).json({ error: 'Archivo no encontrado' });
-        }
+      // 1. Filtrar el array archivosPdf antes de buscar
+      const archivosPdf = input.archivosPdf;
+      if (archivosPdf && archivosPdf.length > 0 && archivosPdf.some(path => path !== "")) { // Verifica si hay elementos no vacíos
+          const pdfPath = archivosPdf.find(path => path.endsWith(filename));
 
-        // 1. Construir la ruta completa (usando una ruta base)
-        const fullPdfPath = path.join(pdfPath);
+          if (!pdfPath) {
+              return res.status(404).json({ error: 'Archivo no encontrado' });
+          }
 
-        // 2. Verificar si el archivo existe ANTES de crear el stream
-        const fs = require('fs'); // Importa el módulo fs
-        if (!fs.existsSync(fullPdfPath)) {
-            console.error('Archivo no encontrado:', fullPdfPath);
-            return res.status(404).json({ error: 'Archivo no encontrado' });
-        }
+          // 2. Construir la ruta completa
+          const fullPdfPath = path.join(pdfPath);
 
-        // 3. Manejo de errores en el stream
-        res.setHeader('Content-Type', 'application/pdf');
-        fs.createReadStream(fullPdfPath)
-            .on('error', (err) => {
-                if (err.code === 'ENOENT') {
-                    console.error('Archivo no encontrado:', fullPdfPath);
-                    return res.status(404).json({ error: 'Archivo no encontrado' });
-                }
-                console.error('Error al leer el archivo PDF:', err);
-                res.status(500).json({ error: 'Error interno del servidor' });
-            })
-            .pipe(res); // El pipe va DESPUÉS del manejo de errores
+          // 3. Verificar si el archivo existe
+          const fs = require('fs');
+          if (!fs.existsSync(fullPdfPath)) {
+              console.error('Archivo no encontrado:', fullPdfPath);
+              return res.status(404).json({ error: 'Archivo no encontrado' });
+          }
 
-    } catch (error) {
-        console.error('Error al servir el archivo PDF:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
+          // 4. Manejo de errores en el stream
+          res.setHeader('Content-Type', 'application/pdf');
+          fs.createReadStream(fullPdfPath)
+              .on('error', (err) => {
+                  if (err.code === 'ENOENT') {
+                      console.error('Archivo no encontrado:', fullPdfPath);
+                      return res.status(404).json({ error: 'Archivo no encontrado' });
+                  }
+                  console.error('Error al leer el archivo PDF:', err);
+                  res.status(500).json({ error: 'Error interno del servidor' });
+              })
+              .pipe(res);
+
+      } else {
+          return res.status(404).json({ error: 'No se encontraron archivos PDF' });
+      }
+
+  } catch (error) {
+      console.error('Error al servir el archivo PDF:', error);
+      res.status(500).json({ error: 'Error interno del servidor' });
+  }
 };
 
 exports.getPdfByIdSeguimiento = async (req, res) => {
@@ -88,34 +96,40 @@ exports.getPdfByIdSeguimiento = async (req, res) => {
             return res.status(404).json({ error: 'Registro no encontrado' });
         }
 
-        // Encontrar el archivo específico
-        const pdfPath = input.seguimientos.archivosPdf_seguimiento.find(path => path.endsWith(filename));
-        if (!pdfPath) {
-            return res.status(404).json({ error: 'Archivo no encontrado' });
+        // Filtrar el array antes de buscar
+        const archivosPdf = input.seguimientos.archivosPdf_seguimiento;
+        if (archivosPdf && archivosPdf.length > 0 && archivosPdf.some(path => path !== "")) { // Verifica si hay elementos no vacíos
+            const pdfPath = archivosPdf.find(path => path.endsWith(filename));
+
+            if (!pdfPath) {
+                return res.status(404).json({ error: 'Archivo no encontrado' });
+            }
+
+            // 1. Construir la ruta completa (usando una ruta base)
+            const fullPdfPath = path.join(pdfPath);
+
+            // 2. Verificar si el archivo existe ANTES de crear el stream
+            const fs = require('fs'); // Importa el módulo fs
+            if (!fs.existsSync(fullPdfPath)) {
+                console.error('Archivo no encontrado:', fullPdfPath);
+                return res.status(404).json({ error: 'Archivo no encontrado' });
+            }
+
+            // 3. Manejo de errores en el stream
+            res.setHeader('Content-Type', 'application/pdf');
+            fs.createReadStream(fullPdfPath)
+                .on('error', (err) => {
+                    if (err.code === 'ENOENT') {
+                        console.error('Archivo no encontrado:', fullPdfPath);
+                        return res.status(404).json({ error: 'Archivo no encontrado' });
+                    }
+                    console.error('Error al leer el archivo PDF:', err);
+                    res.status(500).json({ error: 'Error interno del servidor' });
+                })
+                .pipe(res); // El pipe va DESPUÉS del manejo de errores
+        } else {
+            return res.status(404).json({ error: 'No se encontraron archivos PDF de seguimiento' });
         }
-
-        // 1. Construir la ruta completa (usando una ruta base)
-        const fullPdfPath = path.join(pdfPath);
-
-        // 2. Verificar si el archivo existe ANTES de crear el stream
-        const fs = require('fs'); // Importa el módulo fs
-        if (!fs.existsSync(fullPdfPath)) {
-            console.error('Archivo no encontrado:', fullPdfPath);
-            return res.status(404).json({ error: 'Archivo no encontrado' });
-        }
-
-        // 3. Manejo de errores en el stream
-        res.setHeader('Content-Type', 'application/pdf');
-        fs.createReadStream(fullPdfPath)
-            .on('error', (err) => {
-                if (err.code === 'ENOENT') {
-                    console.error('Archivo no encontrado:', fullPdfPath);
-                    return res.status(404).json({ error: 'Archivo no encontrado' });
-                }
-                console.error('Error al leer el archivo PDF:', err);
-                res.status(500).json({ error: 'Error interno del servidor' });
-            })
-            .pipe(res); // El pipe va DESPUÉS del manejo de errores
     } catch (error) {
         console.error('Error al servir el archivo PDF:', error);
         res.status(500).json({ error: 'Error interno del servidor' });
@@ -505,7 +519,8 @@ exports.getDuplicatedOficiosByInputId = async (req, res) => {
                     pipeline: [
                         {
                             $match: {
-                                $expr: { $eq: ["$num_oficio", "$$num_oficio"] }
+                                $expr: { $eq: ["$num_oficio", "$$num_oficio"] },
+                                deleted: false
                             }
                         },
                         {
@@ -606,6 +621,7 @@ exports.getDuplicatedOficiosByInputIdByNormalUsers = async (req, res) => {
                         {
                             $match: {
                                 $expr: { $eq: ["$num_oficio", "$$num_oficio"] },
+                                deleted: false,
                                 asignado: areaUsuario
                             }
                         },
@@ -688,10 +704,22 @@ exports.updateInputById = async (req, res) => {
         // 2. Incrementar edit_count
         const newEditCount = (existingInput.edit_count || 0) + 1;
 
-        // 3. Realizar la actualización, incluyendo el nuevo valor de edit_count
+        // 3. Filtrar archivosPdf y archivosPdf_seguimiento del req.body
+        const archivosPdf = req.body.archivosPdf ? req.body.archivosPdf.filter(path => path !== "") : existingInput.archivosPdf;
+        const archivosPdf_seguimiento = req.body.archivosPdf_seguimiento ? req.body.archivosPdf_seguimiento.filter(path => path !== "") : existingInput.archivosPdf_seguimiento;
+
+        // 4. Crear un nuevo objeto body con los arrays filtrados
+        const filteredBody = {
+          ...req.body,
+          archivosPdf: archivosPdf,
+          archivosPdf_seguimiento: archivosPdf_seguimiento,
+          edit_count: newEditCount // Incluye edit_count aquí
+        };
+
+        // 5. Realizar la actualización, incluyendo el nuevo valor de edit_count
         const updatedInput = await Input.findByIdAndUpdate(
             inputId,
-            { $set: { ...req.body, edit_count: newEditCount } }, // Incluye edit_count en la actualización
+            { $set: filteredBody }, // Incluye edit_count en la actualización
             { new: true, runValidators: true }
         ).populate('create_user').populate('editor_user').lean();
 
@@ -714,73 +742,110 @@ exports.updateInputById = async (req, res) => {
 
 exports.getAreasPerDay = async (req, res) => {
     try {
-        const searchDate = new Date(req.params.search);
+        let searchDate = new Date(req.params.search);
 
-        const inputs = await Input.aggregate([
-            { $match: { fecha_recepcion:  searchDate } },
-            {
-            $group: {
-                _id: '$asignado',
-                cantidad: { $sum: 1 },
-                asunto: { $push: '$asunto' }
-            }
-            }
-        ]);
-    
-        if (inputs.length === 0) {
-            return res.status(404).json({ 
-            status: 'not_found', 
-            message: 'No se encontraron registros para la fecha de recepción.' 
+        // Validar que la fecha sea válida
+        if (isNaN(searchDate)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Fecha inválida. Debe tener el formato YYYY-MM-DD.'
             });
         }
-    
-        return res.status(200).json({ 
-            status: 'success', 
-            data: inputs 
+
+        // Ajustar la fecha para que sea a medianoche (inicio del día)
+        searchDate.setHours(0, 0, 0, 0);
+
+        const inputs = await Input.aggregate([
+            {
+                $match: {
+                    fecha_recepcion: {
+                        $gte: searchDate, // Mayor o igual que la medianoche del día buscado
+                        $lt: new Date(searchDate.getTime() + 24 * 60 * 60 * 1000) // Menor que la medianoche del día siguiente
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: '$asignado',
+                    cantidad: { $sum: 1 },
+                    asunto: { $push: '$asunto' }
+                }
+            }
+        ]);
+
+        if (!inputs || inputs.length === 0) { // Manejar el caso de que no se encuentren registros
+            return res.status(404).json({ error: 'No se encontraron registros con los criterios especificados' });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            data: inputs
         });
-  
+
     } catch (error) {
-      console.error('Error al buscar registros:', error);
-      return res.status(500).json({ 
-        status: 'error', 
-        message: 'Error al procesar la solicitud.' 
-      });
+        console.error('Error al buscar registros:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Error al procesar la solicitud.'
+        });
     }
 };
 
 exports.reporteResumen = async (req, res) => {
     try {
-      const searchDate = new Date(req.params.search); 
+        let searchDate = new Date(req.params.search);
 
-      const aggregationResult = await Input.aggregate([
-        { $match: { fecha_recepcion: searchDate } },
-        {
-          $group: {
-            _id: '$asignado',
-            cantidad: { $sum: 1 },
-            asunto: { $push: '$asunto' }
-          }
+        // Validar que la fecha sea válida
+        if (isNaN(searchDate)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Fecha inválida. Debe tener el formato YYYY-MM-DD.'
+            });
         }
-      ]);
+
+        // Ajustar la fecha para que sea a medianoche (inicio del día)
+        searchDate.setHours(0, 0, 0, 0);
+
+        const inputs = await Input.aggregate([
+            {
+                $match: {
+                    fecha_recepcion: {
+                        $gte: searchDate, // Mayor o igual que la medianoche del día buscado
+                        $lt: new Date(searchDate.getTime() + 24 * 60 * 60 * 1000) // Menor que la medianoche del día siguiente
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: '$asignado',
+                    cantidad: { $sum: 1 },
+                    asunto: { $push: '$asunto' }
+                }
+            }
+        ]);
+
+        if (!inputs || inputs.length === 0) { // Manejar el caso de que no se encuentren registros
+            return res.status(404).json({ error: 'No se encontraron registros con los criterios especificados' });
+        }
   
-      const workbook = ExcelResumeReport(aggregationResult);
-  
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-  
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=" + "data.xlsx"
-      );
-  
-      await workbook.xlsx.write(res);
-      return res.status(200).end();
+        const workbook = ExcelResumeReport(inputs);
+    
+        res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+    
+        res.setHeader(
+            "Content-Disposition",
+            "attachment; filename=" + "data.xlsx"
+        );
+    
+        await workbook.xlsx.write(res);
+        return res.status(200).end();
   
     } catch (error) {
-      console.error('Error al generar el reporte:', error);
-      res.status(500).json({ error: 'Error al generar el reporte' });
+        console.error('Error al generar el reporte:', error);
+        res.status(500).json({ error: 'Error al generar el reporte' });
     }
 };
 
@@ -986,6 +1051,10 @@ exports.generarReporteDiario = async (req, res) => {
         }).lean();
         // console.log(`Se encontraron ${offices.length} folios`);
 
+        if (!offices || offices.length === 0) { // Manejar el caso de que no se encuentren registros
+            return res.status(404).json({ error: 'No se encontraron registros con los criterios especificados' });
+        }
+
         const workbook = ExcelReport(offices);
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1189,5 +1258,169 @@ exports.calcularTiempoRespuestaTotal = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ mensaje: 'Error al calcular el tiempo total' });
+    }
+};
+
+//Traer todos los registros por estatus y fecha de todas las areas
+// exports.exportarDatosExcelPorEstatusFecha = async (req, res) => {
+//     try {
+//         const { estatus, fechaInicio, fechaFin } = req.query;
+//         console.log(estatus, fechaInicio, fechaFin);
+//         // Validación de fechas
+//         const startDate = new Date(fechaInicio);
+//         if (isNaN(startDate.getTime())) {
+//             return res.status(400).json({ error: 'La fecha de inicio no es válida' });
+//         }
+//         const endDate = fechaFin ? new Date(fechaFin) : null;
+//         if (endDate && isNaN(endDate.getTime())) {
+//             return res.status(400).json({ error: 'La fecha de fin no es válida' });
+//         }
+
+//         const allowedStatus = ['ATENDIDO', 'NO ATENDIDO',];
+//         if (estatus && !allowedStatus.includes(estatus.toUpperCase())) {
+//             return res.status(400).json({ error: 'El estatus proporcionado no es válido' });
+//         }
+        
+//         const query = { deleted: false };
+
+//         if (estatus) {
+//             query.estatus = estatus.toUpperCase();
+//         }
+
+//         if (endDate) {
+//             // Rango de fechas
+//             query.fecha_recepcion = { $gte: startDate, $lte: endDate };
+//         } else {
+//             // Fecha única
+//             query.fecha_recepcion = {
+//                 $gte: startDate,
+//                 $lt: new Date(startDate.getTime() + 24 * 60 * 60 * 1000)
+//             };
+//         }
+
+//         const inputs = await Input.find(query).sort({ 
+//             anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
+//         }).lean();
+
+//         if (!inputs || inputs.length === 0) { // Manejar el caso de que no se encuentren registros
+//             return res.status(404).json({ error: 'No se encontraron registros con los criterios especificados' });
+//         }
+
+//         const workbook = await ExcelFullData.generateExcel(inputs);
+
+//         const formattedDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+//         const filename = `Reporte_por_${estatus}_${formattedDate}.xlsx`;
+
+//         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+//         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+//         try {
+//             await workbook.xlsx.write(res);
+//             return res.status(200).end();
+//         } catch (excelError) {
+//             console.error("Error al escribir el archivo Excel:", excelError);
+//             return res.status(500).json({ error: 'Error al generar el archivo Excel' });
+//         }
+//     } catch (error) {
+//         console.error("Error en exportarDatosExcelPorEstatusFecha:", error);
+
+//         if (error.name === 'ValidationError') { // Errores de validación de Mongoose
+//             const errors = Object.values(error.errors).map(err => err.message);
+//             return res.status(400).json({ error: errors }); // Enviar errores de validación al cliente
+//         } else if (error.name === 'CastError') { // Errores de conversión de ObjectId
+//             return res.status(400).json({ error: 'ID inválido' });
+//         }
+
+//         res.status(500).json({ error: 'Error interno del servidor' });
+//     }
+// };
+
+//Traer todos los registros por estatus y fecha por area
+exports.exportarDatosExcelPorEstatusFechaPorArea = async (req, res) => {
+    let areaUsuario;
+
+    // Determinar cómo se proporciona el área (prioridad: query > params > body)
+    if (req.query.area) {
+        areaUsuario = req.query.area;
+    } else if (req.params.area) {
+        areaUsuario = req.params.area;
+    } else if (req.body.area) {
+        areaUsuario = req.body.area;
+    } else {
+        return res.status(400).json({
+            status: 'error',
+            message: 'El parámetro "area" es requerido (query, params o body).',
+        });
+    }
+
+    try {
+        const { fechaInicio, fechaFin, estatus } = req.query;
+
+        // Validación de fechas
+        const startDate = new Date(fechaInicio);
+        if (isNaN(startDate.getTime())) {
+            return res.status(400).json({ error: 'La fecha de inicio no es válida' });
+        }
+        const endDate = fechaFin ? new Date(fechaFin) : null;
+        if (endDate && isNaN(endDate.getTime())) {
+            return res.status(400).json({ error: 'La fecha de fin no es válida' });
+        }
+
+        const allowedStatus = ['ATENDIDO', 'NO ATENDIDO',];
+        if (estatus && !allowedStatus.includes(estatus.toUpperCase())) {
+            return res.status(400).json({ error: 'El estatus proporcionado no es válido' });
+        }
+        
+        const query = { deleted: false, asignado: areaUsuario };
+        
+        if (estatus) {
+            query.estatus = estatus.toUpperCase();
+        }
+
+        if (endDate) {
+            // Rango de fechas
+            query.fecha_recepcion = { $gte: startDate, $lte: endDate };
+        } else {
+            // Fecha única
+            query.fecha_recepcion = {
+                $gte: startDate,
+                $lt: new Date(startDate.getTime() + 24 * 60 * 60 * 1000)
+            };
+        }
+
+        const inputs = await Input.find(query).sort({ 
+            anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
+        }).lean();
+
+        if (!inputs || inputs.length === 0) { // Manejar el caso de que no se encuentren registros
+            return res.status(404).json({ error: 'No se encontraron registros con los criterios especificados' });
+        }
+
+        const workbook = await ExcelFullData.generateExcel(inputs);
+
+        const formattedDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const filename = `Reporte_por_${areaUsuario}_${estatus}_${formattedDate}.xlsx`;
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        try {
+            await workbook.xlsx.write(res);
+            return res.status(200).end();
+        } catch (excelError) {
+            console.error("Error al escribir el archivo Excel:", excelError);
+            return res.status(500).json({ error: 'Error al generar el archivo Excel' });
+        }
+    } catch (error) {
+        console.error("Error en exportarDatosExcelPorEstatusFecha:", error);
+
+        if (error.name === 'ValidationError') { // Errores de validación de Mongoose
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({ error: errors }); // Enviar errores de validación al cliente
+        } else if (error.name === 'CastError') { // Errores de conversión de ObjectId
+            return res.status(400).json({ error: 'ID inválido' });
+        }
+
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
 };

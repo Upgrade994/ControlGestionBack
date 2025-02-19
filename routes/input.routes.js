@@ -41,6 +41,8 @@ module.exports = function(app){
     app.get('/api/exportar-excel-todos-anios-posteriores', inputController.exportarDatosExcelAllPreviousYear);
 
     app.get('/api/reporte-rango/:search?', inputController.generarReporteDiario);
+    // app.get('/api/reporte-estatus-fecha/:estatus?/:search?', inputController.exportarDatosExcelPorEstatusFecha); 
+    app.get('/api/reporte_estatus_area/:estatus?/:area?/:search?', inputController.exportarDatosExcelPorEstatusFechaPorArea); 
 
     app.get('/api/tiempos/:id', inputController.calcularTiempoRespuestaPorId);
     app.get('/api/tiempos-total/:area', inputController.calcularTiempoRespuestaTotal);
