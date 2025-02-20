@@ -169,6 +169,8 @@ exports.getNoDeletedInputsInCurrentYearByNormalUsers = async (req, res) => {
             asignado: 1,
             asunto: 1,
             estatus: 1,
+            remitente: 1,
+            institucion_origen: 1,
             _id: 1,
             'seguimientos.atencion_otorgada': 1,
         };
@@ -231,6 +233,8 @@ exports.getNoDeletedInputsInPreviusYearByNormalUsers = async (req, res) => {
             asignado: 1,
             asunto: 1,
             estatus: 1,
+            remitente: 1,
+            institucion_origen: 1,
             _id: 1,
             'seguimientos.atencion_otorgada': 1,
         };
@@ -279,6 +283,8 @@ exports.getNoDeletedInputsInCurrentYear = async (req, res) => {
             asignado: 1,
             asunto: 1,
             estatus: 1,
+            remitente: 1,
+            institucion_origen: 1,
             _id: 1,
             'seguimientos.atencion_otorgada': 1,
         };
@@ -329,6 +335,8 @@ exports.getNoDeletedInputsInPreviusYear = async (req, res) => {
             asignado: 1,
             asunto: 1,
             estatus: 1,
+            remitente: 1,
+            institucion_origen: 1,
             _id: 1,
             'seguimientos.atencion_otorgada': 1,
         };
@@ -744,17 +752,6 @@ exports.getAreasPerDay = async (req, res) => {
     try {
         let searchDate = new Date(req.params.search);
 
-        // Validar que la fecha sea válida
-        if (isNaN(searchDate)) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Fecha inválida. Debe tener el formato YYYY-MM-DD.'
-            });
-        }
-
-        // Ajustar la fecha para que sea a medianoche (inicio del día)
-        searchDate.setHours(0, 0, 0, 0);
-
         const inputs = await Input.aggregate([
             {
                 $match: {
@@ -766,9 +763,21 @@ exports.getAreasPerDay = async (req, res) => {
             },
             {
                 $group: {
-                    _id: '$asignado',
+                    _id: {
+                        asignado: '$asignado',
+                        fecha_recepcion: '$fecha_recepcion'
+                    },
                     cantidad: { $sum: 1 },
                     asunto: { $push: '$asunto' }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    asignado: '$_id.asignado',
+                    fecha_recepcion: '$_id.fecha_recepcion',
+                    cantidad: 1,
+                    asunto: 1
                 }
             }
         ]);
@@ -795,17 +804,6 @@ exports.reporteResumen = async (req, res) => {
     try {
         let searchDate = new Date(req.params.search);
 
-        // Validar que la fecha sea válida
-        if (isNaN(searchDate)) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Fecha inválida. Debe tener el formato YYYY-MM-DD.'
-            });
-        }
-
-        // Ajustar la fecha para que sea a medianoche (inicio del día)
-        searchDate.setHours(0, 0, 0, 0);
-
         const inputs = await Input.aggregate([
             {
                 $match: {
@@ -817,9 +815,21 @@ exports.reporteResumen = async (req, res) => {
             },
             {
                 $group: {
-                    _id: '$asignado',
+                    _id: {
+                        asignado: '$asignado',
+                        fecha_recepcion: '$fecha_recepcion'
+                    },
                     cantidad: { $sum: 1 },
                     asunto: { $push: '$asunto' }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    asignado: '$_id.asignado',
+                    fecha_recepcion: '$_id.fecha_recepcion',
+                    cantidad: 1,
+                    asunto: 1
                 }
             }
         ]);
@@ -1165,8 +1175,33 @@ exports.calcularTiempoRespuestaTotal = async (req, res) => {
             });
         }
 
+        const { fechaInicio, fechaFin } = req.query;
+
+        // Validación de fechas
+        const startDate = new Date(fechaInicio);
+        if (isNaN(startDate.getTime())) {
+            return res.status(400).json({ error: 'La fecha de inicio no es válida' });
+        }
+        const endDate = fechaFin ? new Date(fechaFin) : null;
+        if (endDate && isNaN(endDate.getTime())) {
+            return res.status(400).json({ error: 'La fecha de fin no es válida' });
+        }
+
+        // Construir la consulta
+        let query = { deleted: false, asignado: areaUsuario };
+        if (endDate) {
+            // Rango de fechas
+            query.fecha_recepcion = { $gte: startDate, $lte: endDate };
+        } else {
+            // Fecha única
+            query.fecha_recepcion = {
+                $gte: startDate,
+                $lt: new Date(startDate.getTime() + 24 * 60 * 60 * 1000)
+            };
+        }
+
         const resultados = await Input.aggregate([
-            { $match: { deleted: false, asignado: areaUsuario } },
+            { $match: query },
             {
                 $project: {
                     _id: 1,
@@ -1178,7 +1213,8 @@ exports.calcularTiempoRespuestaTotal = async (req, res) => {
                             new Date()
                         ]
                     },
-                    asignado: '$asignado'
+                    asignado: '$asignado',
+                    estatus: '$estatus'
                 }
             },
             {
@@ -1188,6 +1224,7 @@ exports.calcularTiempoRespuestaTotal = async (req, res) => {
                     tiempo_recepcion: 1,
                     tiempo_respuesta: 1,
                     asignado: 1,
+                    estatus: 1,
                     diferencia_milisegundos: {
                         $cond: {
                             if: { $and: [ { $not: ['$tiempo_recepcion'] }, { $not: ['$tiempo_respuesta'] } ] },
@@ -1204,6 +1241,7 @@ exports.calcularTiempoRespuestaTotal = async (req, res) => {
                     tiempo_recepcion: 1,
                     tiempo_respuesta: 1,
                     asignado: 1,
+                    estatus: 1,
                     diferencia_milisegundos: 1,
                     diferencia_dias: {
                         $cond: {
@@ -1215,6 +1253,14 @@ exports.calcularTiempoRespuestaTotal = async (req, res) => {
                 }
             },
         ]);
+
+        if (!resultados || resultados.length === 0) { // Manejar el caso de que no se encuentren registros
+            return res.status(404).json({ error: 'No se encontraron registros con los criterios especificados' });
+        }
+
+        // Calcular total de oficios por estatus
+        const totalAtendidos = resultados.filter(resultado => resultado.estatus === 'ATENDIDO').length;
+        const totalNoAtendidos = resultados.filter(resultado => resultado.estatus !== 'ATENDIDO').length; // Asumiendo que cualquier otro estatus es "No Atendido"
     
         // res.status(200).json(resultados);
         const tiemposDeRespuesta = resultados.map(resultado => resultado.diferencia_dias).filter(tiempo => tiempo !== null); // Obtener los tiempos de respuesta y filtrar los valores null
@@ -1252,12 +1298,22 @@ exports.calcularTiempoRespuestaTotal = async (req, res) => {
             percentil25_dias,
             percentil75_dias,
             desviacion_estandar_dias,
+            total_atendidos: totalAtendidos,
+            total_no_atendidos: totalNoAtendidos,
             total_oficios: resultados.length,
             datos_oficios: resultados
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ mensaje: 'Error al calcular el tiempo total' });
+        console.error("Error en exportarDatosExcelPorEstatusFecha:", error);
+
+        if (error.name === 'ValidationError') { // Errores de validación de Mongoose
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({ error: errors }); // Enviar errores de validación al cliente
+        } else if (error.name === 'CastError') { // Errores de conversión de ObjectId
+            return res.status(400).json({ error: 'ID inválido' });
+        }
+
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
 

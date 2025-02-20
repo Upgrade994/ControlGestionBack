@@ -10,7 +10,8 @@ ws.mergeCells('A1:B3');
 
 ws.getCell('A1').value = {
     richText: [
-      {'font': {'size': 10},'text': 'TARJETA DE RESUMEN\n'+'RECEPCIÓN DE DOCUMENTOS\n'},
+        {'font': {'size': 10}, 'text': 'TARJETA DE RESUMEN\n' + 'RECEPCIÓN DE DOCUMENTOS\n'},
+        {'font': {'size': 8}, 'text': `Fecha de recepción: ${data && data.length > 0 && data[0].fecha_recepcion ? new Date(data[0].fecha_recepcion).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Fecha no disponible'}`}
     ]
 }
 
@@ -34,7 +35,7 @@ ws.addRow(['']);
 
 data.forEach((origen, indexs) =>{
     
-    ws.addRow([ origen._id, origen.cantidad])
+    ws.addRow([ origen.asignado, origen.cantidad])
     sumaDeFilas.push(indexs)
 
     origen.asunto.forEach( (asuntos,index) => {
