@@ -450,7 +450,7 @@ exports.existeFolio = async (req, res) => {
       const anio = parseInt(req.params.anio);
       const folio = parseInt(req.params.folio);
   
-      const registro = await Input.findOne({ anio, folio });
+      const registro = await Input.findOne({ anio, folio, deleted: false });
       res.json(!!registro); // Devuelve true si existe, false si no
     } catch (error) {
       console.error("Error al verificar folio:", error);
@@ -466,7 +466,7 @@ exports.getUltimoFolio = async (req, res) => {
             return res.status(400).json({ message: 'Año inválido.' });
         }
 
-        const ultimoRegistro = await Input.findOne({ anio }, { folio: 1 }, { sort: { folio: -1 } });
+        const ultimoRegistro = await Input.findOne({ anio, deleted: false }, { folio: 1 }, { sort: { folio: -1 } });
         
         if (!ultimoRegistro) {
             return res.json(0); // Si no hay registros, devuelve 0
@@ -1030,6 +1030,21 @@ exports.exportarDatosExcelAllPreviousYear = async (req, res) => {
 
 exports.generarReporteDiario = async (req, res) => {
     try {
+        let areaUsuario;
+
+        if (req.query.area) {
+            areaUsuario = req.query.area;
+        } else if (req.params.area) {
+            areaUsuario = req.params.area;
+        } else if (req.body.area) {
+            areaUsuario = req.body.area;
+        } else {
+            return res.status(400).json({
+                status: 'error',
+                message: 'El parámetro "area" es requerido (query, params o body).',
+            });
+        }
+
         const { fechaInicio, fechaFin } = req.query;
 
         // Validación de fechas
@@ -1043,7 +1058,7 @@ exports.generarReporteDiario = async (req, res) => {
         }
 
         // Construir la consulta
-        let query = { deleted: false };
+        let query = { deleted: false, asignado: areaUsuario };
         if (endDate) {
             // Rango de fechas
             query.fecha_recepcion = { $gte: startDate, $lte: endDate };

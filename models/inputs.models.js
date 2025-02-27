@@ -2,23 +2,23 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const seguimientoSchema = new Schema({
-    oficio_salida: { type: String },
+    oficio_salida: { type: String, required: true },
     fecha_respuesta: { type: Date, default: Date.now },
     usuario: {
         id: String,
         username: String,
     },
-    comentarios: { type: String, uppercase: true }, // Observaciones
+    comentarios: { type: String, uppercase: true },
     archivosPdf_seguimiento: [{ type: String }],
-    num_expediente: {type: String, uppercase: true},
-    fecha_oficio_salida: {type: Date},
-    fecha_acuse_recibido: {type: Date},
-    destinatario: {type: String, uppercase: true},
-    cargo: {type: String, uppercase: true},
-    atencion_otorgada: {type: String, uppercase: true},
-    anexo: {type: String},
-    estatus: {type: String, uppercase: true},
-    firma_visado: {type: String},
+    num_expediente: { type: String, uppercase: true },
+    fecha_oficio_salida: { type: Date },
+    fecha_acuse_recibido: { type: Date, required: true },
+    destinatario: { type: String, uppercase: true, required: true },
+    cargo: { type: String, uppercase: true, required: true },
+    atencion_otorgada: { type: String, uppercase: true, required: true },
+    anexo: { type: String },
+    estatus: { type: String, uppercase: true },
+    firma_visado: { type: String },
 }, { timestamps: true });
 
 const inputSchema = new Schema({
