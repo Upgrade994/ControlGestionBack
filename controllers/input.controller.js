@@ -368,6 +368,141 @@ exports.getNoDeletedInputsInPreviusYear = async (req, res) => {
     }
 },
 
+exports.getInputsByYear = async (req, res) => {
+    try {
+        const { year } = req.query;
+        const currentYearMinusOne = new Date().getFullYear() - 1;
+
+        // Validar el año
+        if (!year) {
+            return res.status(400).json({ status: 'error', message: 'El año es requerido.' });
+        }
+
+        const anio = parseInt(year);
+
+        if (isNaN(anio) || anio < 2021 || anio > currentYearMinusOne) { // Usar el año calculado
+            return res.status(400).json({ status: 'error', message: `El año debe ser un número entre 2021 y ${currentYearMinusOne}.` });
+        }
+
+        // Definir la proyección
+        const projection = {
+            anio: 1,
+            folio: 1,
+            num_oficio: 1,
+            fecha_recepcion: 1,
+            asignado: 1,
+            asunto: 1,
+            estatus: 1,
+            remitente: 1,
+            institucion_origen: 1,
+            _id: 1,
+            'seguimientos.atencion_otorgada': 1,
+        };
+
+        // Definir el ordenamiento
+        const sort = { anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 };
+
+        const totalInputs = await Input.countDocuments({ anio, deleted: false });
+        const inputs = await Input.find({ anio, deleted: false }, projection).sort(sort).lean();
+
+        if (inputs.length === 0) {
+            return res.status(200).json({ // Cambiado a 200 OK
+                status: 'success',
+                message: 'No se encontraron registros para el año especificado.',
+                inputs: [], // Enviar un array vacío para ser consistente
+                totalInputs: 0 // Indicar que no hay registros
+            });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            inputs: inputs,
+            totalInputs: totalInputs,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Error al devolver el registro.',
+        });
+    }
+};
+
+exports.getInputsByYearByNormalUsers = async (req, res) => {
+    try {
+        const { year } = req.query;
+        const currentYearMinusOne = new Date().getFullYear() - 1;
+
+        let areaUsuario;
+
+        if (req.query.area) {
+            areaUsuario = req.query.area;
+        } else if (req.params.area) {
+            areaUsuario = req.params.area;
+        } else if (req.body.area) {
+            areaUsuario = req.body.area;
+        } else {
+            return res.status(400).json({
+                status: 'error',
+                message: 'El parámetro "area" es requerido (query, params o body).',
+            });
+        }
+
+        // Validar el año
+        if (!year) {
+            return res.status(400).json({ status: 'error', message: 'El año es requerido.' });
+        }
+
+        const anio = parseInt(year);
+
+        if (isNaN(anio) || anio < 2021 || anio > currentYearMinusOne) { // Usar el año calculado
+            return res.status(400).json({ status: 'error', message: `El año debe ser un número entre 2021 y ${currentYearMinusOne}.` });
+        }
+
+        // Definir la proyección
+        const projection = {
+            anio: 1,
+            folio: 1,
+            num_oficio: 1,
+            fecha_recepcion: 1,
+            asignado: 1,
+            asunto: 1,
+            estatus: 1,
+            remitente: 1,
+            institucion_origen: 1,
+            _id: 1,
+            'seguimientos.atencion_otorgada': 1,
+        };
+
+        // Definir el ordenamiento
+        const sort = { anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1 };
+
+        const totalInputs = await Input.countDocuments({ anio, deleted: false, asignado: areaUsuario });
+        const inputs = await Input.find({ anio, deleted: false, asignado: areaUsuario }, projection).sort(sort).lean();
+
+        if (inputs.length === 0) {
+            return res.status(200).json({ // Cambiado a 200 OK
+                status: 'success',
+                message: 'No se encontraron registros para el año especificado.',
+                inputs: [], // Enviar un array vacío para ser consistente
+                totalInputs: 0 // Indicar que no hay registros
+            });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            inputs: inputs,
+            totalInputs: totalInputs,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Error al devolver el registro.',
+        });
+    }
+};
+
 //Crear registros de entrada 21/01/2025 (FUNCIONANDO Y TERMINADO)
 exports.createInput = async (req, res) => {
     try {
@@ -387,9 +522,19 @@ exports.createInput = async (req, res) => {
             });
         }
 
+        // 3. Determinar el año a usar
+        let anio = new Date().getFullYear(); // Año actual por defecto
+
+        if (req.body.anio) {
+            const anioSolicitud = parseInt(req.body.anio);
+            if (!isNaN(anioSolicitud) && anioSolicitud > 0) {
+                anio = anioSolicitud; // Usar el año proporcionado en la solicitud
+            }
+        }
+
         // 3. Crear el nuevo registro
         const newinput = new Input({
-            anio: new Date().getFullYear(),
+            anio: anio,
             folio: req.body.folio,
             num_oficio: req.body.num_oficio ? req.body.num_oficio.trim() : null,
             fecha_oficio: req.body.fecha_oficio,
@@ -972,6 +1117,7 @@ exports.exportarDatosExcelAllCurrentYear = async (req, res) => {
 //Traer todos los registros con privilegios de enlace, informacion por area años anteriores
 exports.exportarDatosExcelByNormalUsersPreviousYear = async (req, res) => {
     let areaUsuario;
+    const year = parseInt(req.params.year);
 
     // Determinar cómo se proporciona el área (prioridad: query > params > body)
     if (req.query.area) {
@@ -988,8 +1134,7 @@ exports.exportarDatosExcelByNormalUsersPreviousYear = async (req, res) => {
     }
 
     try {
-        const currentYear = new Date().getFullYear();
-        const query = { deleted: false, asignado: areaUsuario, anio: { $lte: currentYear -1 } };
+        const query = { deleted: false, asignado: areaUsuario, anio: year };
         const inputs = await Input.find(query).sort({ 
             anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
         }).lean();
@@ -997,7 +1142,7 @@ exports.exportarDatosExcelByNormalUsersPreviousYear = async (req, res) => {
         const workbook = await ExcelFullData.generateExcel(inputs);
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename="reporte_completo.xlsx"');
+        res.setHeader('Content-Disposition', `attachment; filename="Reporte_${areaUsuario}_${year}.xlsx"`);
         await workbook.xlsx.write(res);
         return res.status(200).end();
     } catch (error) {
@@ -1008,9 +1153,11 @@ exports.exportarDatosExcelByNormalUsersPreviousYear = async (req, res) => {
 
 //Traer todos los registros con todos los privilegios años anteriores
 exports.exportarDatosExcelAllPreviousYear = async (req, res) => {
+    const year = parseInt(req.params.year);
+
     try {
-        const currentYear = new Date().getFullYear();
-        const query = { deleted: false, anio: { $lte: currentYear -1 } };
+        // const currentYear = new Date().getFullYear();
+        const query = { deleted: false, anio: year };
 
         const inputs = await Input.find(query).sort({ 
             anio: -1, folio: -1, fecha_recepcion: -1, createdAt: -1
@@ -1019,7 +1166,7 @@ exports.exportarDatosExcelAllPreviousYear = async (req, res) => {
         const workbook = await ExcelFullData.generateExcel(inputs);
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename="reporte_completo.xlsx"');
+        res.setHeader('Content-Disposition', `attachment; filename="Reporte_Areas_${year}.xlsx"`);
         await workbook.xlsx.write(res);
         return res.status(200).end();
     } catch (error) {

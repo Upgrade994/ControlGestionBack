@@ -10,7 +10,10 @@ module.exports = function(app){
         next();
     });
 
-    app.get("/api/inputs", inputController.getNoDeletedInputsInCurrentYear); 
+    app.get("/api/inputs/year", inputController.getInputsByYear);
+    app.get("/api/inputs/year/normal", inputController.getInputsByYearByNormalUsers);
+
+    app.get("/api/inputs", inputController.getNoDeletedInputsInCurrentYear);
     app.get("/api/inputs_previous", inputController.getNoDeletedInputsInPreviusYear);
 
     app.get("/api/inputs_area/:area?", inputController.getNoDeletedInputsInCurrentYearByNormalUsers); 
@@ -37,8 +40,8 @@ module.exports = function(app){
 
     app.get('/api/exportar-excel-enlace-anio-actual/:area?', inputController.exportarDatosExcelByNormalUsersCurrentYear);
     app.get('/api/exportar-excel-todos-anio-actual', inputController.exportarDatosExcelAllCurrentYear);
-    app.get('/api/exportar-excel-enlace-anios-posteriores/:area?', inputController.exportarDatosExcelByNormalUsersPreviousYear);
-    app.get('/api/exportar-excel-todos-anios-posteriores', inputController.exportarDatosExcelAllPreviousYear);
+    app.get('/api/exportar-excel-enlace-anios-posteriores/:area/:year', inputController.exportarDatosExcelByNormalUsersPreviousYear);
+    app.get('/api/exportar-excel-todos-anios-posteriores/:year', inputController.exportarDatosExcelAllPreviousYear);
 
     app.get('/api/reporte-rango/:search?:area?', inputController.generarReporteDiario);
     // app.get('/api/reporte-estatus-fecha/:estatus?/:search?', inputController.exportarDatosExcelPorEstatusFecha); 
